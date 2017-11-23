@@ -10,5 +10,9 @@ public enum UpdateType {
   
   MATCH,
   
-  CHANGE;
+  CHANGE,
+  
+  SNAPSHOT,
+  
+  L2UPDATE;
 }
