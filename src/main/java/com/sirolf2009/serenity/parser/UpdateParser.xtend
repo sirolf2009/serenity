@@ -1,22 +1,17 @@
-package com.sirolf2009.serenity
+package com.sirolf2009.serenity.parser
 
 import com.google.gson.JsonObject
 import com.sirolf2009.serenity.dto.IUpdate
-import com.sirolf2009.serenity.dto.Reason
-import com.sirolf2009.serenity.dto.Side
-import com.sirolf2009.serenity.dto.UpdateOpen
-import com.sirolf2009.serenity.dto.UpdateType
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Optional
-import java.util.UUID
-import java.util.function.Function
+import com.sirolf2009.serenity.dto.UpdateChange
 import com.sirolf2009.serenity.dto.UpdateDone
 import com.sirolf2009.serenity.dto.UpdateMatch
-import com.sirolf2009.serenity.dto.UpdateChange
+import com.sirolf2009.serenity.dto.UpdateOpen
+import com.sirolf2009.serenity.dto.UpdateType
+import java.util.Optional
+import java.util.function.Function
 import org.apache.logging.log4j.LogManager
 
-class UpdateParser implements Function<JsonObject, Optional<IUpdate>> {
+class UpdateParser extends Parser implements Function<JsonObject, Optional<IUpdate>> {
 	
 	static val log = LogManager.logger
 
@@ -68,38 +63,6 @@ class UpdateParser implements Function<JsonObject, Optional<IUpdate>> {
 			log.warn("Unknown object: "+object, e)
 		}
 		return Optional.empty()
-	}
-
-	def Side side(JsonObject object, String key) {
-		return Side.valueOf(object.string(key).toUpperCase())
-	}
-
-	def Reason reason(JsonObject object, String key) {
-		return Reason.valueOf(object.string(key).toUpperCase())
-	}
-
-	def Date date(JsonObject object, String key) {
-		return new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSSSSX").parse(object.string(key))
-	}
-
-	def UUID uuid(JsonObject object, String key) {
-		return UUID.fromString(object.string(key))
-	}
-
-	def String string(JsonObject object, String key) {
-		return object.getAsJsonPrimitive(key).getAsString()
-	}
-
-	def Double getDouble(JsonObject object, String key) {
-		return object.getAsJsonPrimitive(key).getAsDouble()
-	}
-
-	def Integer getInt(JsonObject object, String key) {
-		return object.getAsJsonPrimitive(key).getAsInt()
-	}
-
-	def Long getLong(JsonObject object, String key) {
-		return object.getAsJsonPrimitive(key).getAsLong()
 	}
 
 }

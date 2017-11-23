@@ -1,4 +1,4 @@
-package com.sirolf2009.serenity
+package com.sirolf2009.serenity.parser
 
 import com.google.gson.Gson
 import org.junit.Test

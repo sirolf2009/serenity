@@ -1,11 +1,11 @@
 package com.sirolf2009.serenity.sketches
 
-import com.sirolf2009.serenity.GDAXClient
+import com.sirolf2009.serenity.client.GDAXClientOrders
 import com.sirolf2009.serenity.dto.Side
+import com.sirolf2009.serenity.dto.UpdateMatch
 import com.sirolf2009.serenity.dto.UpdateOpen
 import grafica.GPlot
 import grafica.GPointsArray
-import com.sirolf2009.serenity.dto.UpdateMatch
 
 class OrderbookEvents extends Sketch {
 
@@ -36,7 +36,7 @@ class OrderbookEvents extends Sketch {
 
 		val start = System.currentTimeMillis()
 
-		new GDAXClient [
+		new GDAXClientOrders [
 			if(it instanceof UpdateOpen) {
 				if(price > 6000) {
 					synchronized(plot) {

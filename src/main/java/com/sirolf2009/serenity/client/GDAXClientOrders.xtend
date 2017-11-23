@@ -1,29 +1,20 @@
-package com.sirolf2009.serenity
+package com.sirolf2009.serenity.client
 
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.sirolf2009.serenity.dto.IUpdate
-import java.net.URI
+import com.sirolf2009.serenity.parser.UpdateParser
 import java.util.concurrent.Executors
 import java.util.function.Consumer
 import org.apache.logging.log4j.LogManager
-import org.java_websocket.client.WebSocketClient
-import org.java_websocket.handshake.ServerHandshake
 
-class GDAXClient extends WebSocketClient {
-
+class GDAXClientOrders extends GDAXClient {
+	
 	static val log = LogManager.logger
 	static val gson = new Gson()
 	static val parser = new UpdateParser()
 	static val executor = Executors.newCachedThreadPool
-
-	val Consumer<IUpdate> onUpdate
-
-	new(Consumer<IUpdate> onUpdate) {
-		super(uri())
-		this.onUpdate = onUpdate
-		connectBlocking()
-		send('''{
+	static val subscribe = '''{
 		    "type": "subscribe",
 		    "product_ids": [
 		        "BTC-EUR"
@@ -31,15 +22,13 @@ class GDAXClient extends WebSocketClient {
 		    "channels": [
 		        "full"
 		    ]
-		}''')
-	}
-
-	override onClose(int code, String reason, boolean remote) {
-		log.warn('''Closed. code=«code» reason=«reason» remote=«remote»''')
-	}
-
-	override onError(Exception exception) {
-		log.error("GDAX sent error", exception)
+		}'''
+		
+	val Consumer<IUpdate> onUpdate
+	
+	new(Consumer<IUpdate> onUpdate) {
+		this.onUpdate = onUpdate
+		send(subscribe)
 	}
 
 	override onMessage(String message) {
@@ -58,13 +47,5 @@ class GDAXClient extends WebSocketClient {
 			}
 		]
 	}
-
-	override onOpen(ServerHandshake handshake) {
-		log.info("Handshaking with " + URI)
-	}
-
-	def static uri() {
-		new URI("wss://ws-feed.gdax.com")
-	}
-
+	
 }
