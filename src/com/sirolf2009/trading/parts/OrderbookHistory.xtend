@@ -106,7 +106,7 @@ class OrderbookHistory {
 				if(it !== null) {
 					bidBuffer.add(bids.get(0).limitPrice.doubleValue())
 					askBuffer.add(asks.get(0).limitPrice.doubleValue())
-					volumeBuffer.add((bids.map[limitPrice.doubleValue() -> remainingAmount.doubleValue()] + asks.map[limitPrice.doubleValue() -> remainingAmount.doubleValue()]).toList())
+					volumeBuffer.add((bids.filter[remainingAmount.doubleValue >= 1].map[limitPrice.doubleValue() -> remainingAmount.doubleValue()] + asks.filter[remainingAmount.doubleValue >= 1].map[limitPrice.doubleValue() -> remainingAmount.doubleValue()]).toList())
 					val volumes = volumeBuffer.toList()
 					val volumesX = volumeBuffer.parallelStream.flatMap [ tick |
 						IntStream.range(0, tick.size()).parallel().mapToObj[volumes.toList.indexOf(tick).doubleValue]

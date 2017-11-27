@@ -26,7 +26,6 @@ import org.eclipse.xtext.xbase.lib.Conversions;
 import org.eclipse.xtext.xbase.lib.Exceptions;
 import org.eclipse.xtext.xbase.lib.Functions.Function1;
 import org.eclipse.xtext.xbase.lib.IterableExtensions;
-import org.eclipse.xtext.xbase.lib.ListExtensions;
 import org.eclipse.xtext.xbase.lib.ObjectExtensions;
 import org.eclipse.xtext.xbase.lib.Pair;
 import org.eclipse.xtext.xbase.lib.Procedures.Procedure1;
@@ -177,45 +176,53 @@ public class OrderbookHistory {
             if ((it != null)) {
               bidBuffer.add(Double.valueOf(it.getBids().get(0).getLimitPrice().doubleValue()));
               askBuffer.add(Double.valueOf(it.getAsks().get(0).getLimitPrice().doubleValue()));
-              final Function1<LimitOrder, Pair<Double, Double>> _function_4 = (LimitOrder it_1) -> {
-                double _doubleValue = it_1.getLimitPrice().doubleValue();
-                double _doubleValue_1 = it_1.getRemainingAmount().doubleValue();
-                return Pair.<Double, Double>of(Double.valueOf(_doubleValue), Double.valueOf(_doubleValue_1));
+              final Function1<LimitOrder, Boolean> _function_4 = (LimitOrder it_1) -> {
+                double _doubleValue = it_1.getRemainingAmount().doubleValue();
+                return Boolean.valueOf((_doubleValue >= 1));
               };
-              List<Pair<Double, Double>> _map = ListExtensions.<LimitOrder, Pair<Double, Double>>map(it.getBids(), _function_4);
               final Function1<LimitOrder, Pair<Double, Double>> _function_5 = (LimitOrder it_1) -> {
                 double _doubleValue = it_1.getLimitPrice().doubleValue();
                 double _doubleValue_1 = it_1.getRemainingAmount().doubleValue();
                 return Pair.<Double, Double>of(Double.valueOf(_doubleValue), Double.valueOf(_doubleValue_1));
               };
-              List<Pair<Double, Double>> _map_1 = ListExtensions.<LimitOrder, Pair<Double, Double>>map(it.getAsks(), _function_5);
+              Iterable<Pair<Double, Double>> _map = IterableExtensions.<LimitOrder, Pair<Double, Double>>map(IterableExtensions.<LimitOrder>filter(it.getBids(), _function_4), _function_5);
+              final Function1<LimitOrder, Boolean> _function_6 = (LimitOrder it_1) -> {
+                double _doubleValue = it_1.getRemainingAmount().doubleValue();
+                return Boolean.valueOf((_doubleValue >= 1));
+              };
+              final Function1<LimitOrder, Pair<Double, Double>> _function_7 = (LimitOrder it_1) -> {
+                double _doubleValue = it_1.getLimitPrice().doubleValue();
+                double _doubleValue_1 = it_1.getRemainingAmount().doubleValue();
+                return Pair.<Double, Double>of(Double.valueOf(_doubleValue), Double.valueOf(_doubleValue_1));
+              };
+              Iterable<Pair<Double, Double>> _map_1 = IterableExtensions.<LimitOrder, Pair<Double, Double>>map(IterableExtensions.<LimitOrder>filter(it.getAsks(), _function_6), _function_7);
               volumeBuffer.add(IterableExtensions.<Pair<Double, Double>>toList(Iterables.<Pair<Double, Double>>concat(_map, _map_1)));
               final List<List<Pair<Double, Double>>> volumes = IterableExtensions.<List<Pair<Double, Double>>>toList(volumeBuffer);
-              final Function<List<Pair<Double, Double>>, Stream<Double>> _function_6 = (List<Pair<Double, Double>> tick) -> {
-                final IntFunction<Double> _function_7 = (int it_1) -> {
+              final Function<List<Pair<Double, Double>>, Stream<Double>> _function_8 = (List<Pair<Double, Double>> tick) -> {
+                final IntFunction<Double> _function_9 = (int it_1) -> {
                   return Double.valueOf(Integer.valueOf(IterableExtensions.<List<Pair<Double, Double>>>toList(volumes).indexOf(tick)).doubleValue());
                 };
-                return IntStream.range(0, tick.size()).parallel().<Double>mapToObj(_function_7);
+                return IntStream.range(0, tick.size()).parallel().<Double>mapToObj(_function_9);
               };
-              final List<Double> volumesX = volumeBuffer.parallelStream().<Double>flatMap(_function_6).collect(Collectors.<Double>toList());
-              final Function<List<Pair<Double, Double>>, Stream<Double>> _function_7 = (List<Pair<Double, Double>> tick) -> {
-                final Function<Pair<Double, Double>, Double> _function_8 = (Pair<Double, Double> it_1) -> {
+              final List<Double> volumesX = volumeBuffer.parallelStream().<Double>flatMap(_function_8).collect(Collectors.<Double>toList());
+              final Function<List<Pair<Double, Double>>, Stream<Double>> _function_9 = (List<Pair<Double, Double>> tick) -> {
+                final Function<Pair<Double, Double>, Double> _function_10 = (Pair<Double, Double> it_1) -> {
                   return it_1.getKey();
                 };
-                return tick.parallelStream().<Double>map(_function_8);
+                return tick.parallelStream().<Double>map(_function_10);
               };
-              final List<Double> volumesY = volumeBuffer.parallelStream().<Double>flatMap(_function_7).collect(Collectors.<Double>toList());
-              final Function<List<Pair<Double, Double>>, Stream<Color>> _function_8 = (List<Pair<Double, Double>> tick) -> {
-                final Function<Pair<Double, Double>, Double> _function_9 = (Pair<Double, Double> it_1) -> {
+              final List<Double> volumesY = volumeBuffer.parallelStream().<Double>flatMap(_function_9).collect(Collectors.<Double>toList());
+              final Function<List<Pair<Double, Double>>, Stream<Color>> _function_10 = (List<Pair<Double, Double>> tick) -> {
+                final Function<Pair<Double, Double>, Double> _function_11 = (Pair<Double, Double> it_1) -> {
                   return Double.valueOf(Math.abs((it_1.getValue()).doubleValue()));
                 };
-                final Function<Double, Color> _function_10 = (Double it_1) -> {
+                final Function<Double, Color> _function_12 = (Double it_1) -> {
                   return getGradient.apply(Long.valueOf(it_1.longValue()));
                 };
-                return tick.parallelStream().<Double>map(_function_9).<Color>map(_function_10);
+                return tick.parallelStream().<Double>map(_function_11).<Color>map(_function_12);
               };
-              final List<Color> volumesColor = volumeBuffer.parallelStream().<Color>flatMap(_function_8).collect(Collectors.<Color>toList());
-              final Runnable _function_9 = () -> {
+              final List<Color> volumesColor = volumeBuffer.parallelStream().<Color>flatMap(_function_10).collect(Collectors.<Color>toList());
+              final Runnable _function_11 = () -> {
                 boolean _isDisposed_1 = this.chart.isDisposed();
                 if (_isDisposed_1) {
                   exchange.disconnect();
@@ -236,7 +243,7 @@ public class OrderbookHistory {
                 _yAxis.setRange(_range);
                 this.chart.redraw();
               };
-              parent.getDisplay().syncExec(_function_9);
+              parent.getDisplay().syncExec(_function_11);
             }
           }
         }
