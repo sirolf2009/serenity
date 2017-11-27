@@ -27,6 +27,12 @@ class Sketch extends PApplet {
 			YAxis.fontColor = 255
 			YAxis.lineColor = 255
 			YAxis.axisLabel.fontColor = 255
+			rightAxis.fontColor = 255
+			rightAxis.lineColor = 255
+			rightAxis.axisLabel.fontColor = 255
+			topAxis.fontColor = 255
+			topAxis.lineColor = 255
+			topAxis.axisLabel.fontColor = 255
 		]
 	}
 
@@ -36,15 +42,19 @@ class Sketch extends PApplet {
 	}
 
 	def interpolate(GLayer layer) {
-		val interpolator = new SplineInterpolator()
-		val xValues = (0 ..< layer.points.NPoints).map[layer.points.getX(it).doubleValue()]
-		val yValues = (0 ..< layer.points.NPoints).map[layer.points.getY(it).doubleValue()]
-		val interpolated = interpolator.interpolate(xValues, yValues)
-		val series = new GPointsArray()
-		xValues.toSet().forEach [
-			series.add(floatValue, interpolated.value(it).floatValue)
-		]
-		return series
+		if(layer.points.NPoints > 2) {
+			val interpolator = new SplineInterpolator()
+			val xValues = (0 ..< layer.points.NPoints).map[layer.points.getX(it).doubleValue()]
+			val yValues = (0 ..< layer.points.NPoints).map[layer.points.getY(it).doubleValue()]
+			val interpolated = interpolator.interpolate(xValues, yValues)
+			val series = new GPointsArray()
+			xValues.toSet().forEach [
+				series.add(floatValue, interpolated.value(it).floatValue)
+			]
+			return series
+		} else {
+			return new GPointsArray()
+		}
 	}
 
 	def curveFit(GPlot plot) {
@@ -53,17 +63,19 @@ class Sketch extends PApplet {
 	}
 
 	def curveFit(GLayer layer) {
-		val fitter = PolynomialCurveFitter.create(32)
-		val points = (0 ..< layer.points.NPoints).map [
-			new WeightedObservedPoint(1, layer.points.getX(it).doubleValue(), layer.points.getY(it).doubleValue())
-		].toList()
-		val fitted = new PolynomialFunction(fitter.fit(points))
-		val xValues = (0 ..< layer.points.NPoints).map[layer.points.getX(it).doubleValue()]
-		val series = new GPointsArray()
-		xValues.toSet().forEach [
-			series.add(floatValue, fitted.value(it).floatValue)
-		]
-		return series
+		if(layer.points.NPoints > 0) {
+			val fitter = PolynomialCurveFitter.create(32)
+			val points = (0 ..< layer.points.NPoints).map [
+				new WeightedObservedPoint(1, layer.points.getX(it).doubleValue(), layer.points.getY(it).doubleValue())
+			].toList()
+			val fitted = new PolynomialFunction(fitter.fit(points))
+			val xValues = (0 ..< layer.points.NPoints).map[layer.points.getX(it).doubleValue()]
+			val series = new GPointsArray()
+			xValues.toSet().forEach [
+				series.add(floatValue, fitted.value(it).floatValue)
+			]
+			return series
+		}
 	}
 
 }
