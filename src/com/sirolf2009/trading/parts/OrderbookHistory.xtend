@@ -2,7 +2,9 @@ package com.sirolf2009.trading.parts
 
 import info.bitrich.xchangestream.bitfinex.BitfinexStreamingExchange
 import info.bitrich.xchangestream.core.StreamingExchangeFactory
+import java.util.HashMap
 import java.util.List
+import java.util.concurrent.atomic.AtomicReference
 import java.util.function.Function
 import java.util.stream.Collectors
 import java.util.stream.IntStream
@@ -13,15 +15,13 @@ import org.eclipse.swt.SWT
 import org.eclipse.swt.graphics.Color
 import org.eclipse.swt.widgets.Composite
 import org.knowm.xchange.currency.CurrencyPair
+import org.knowm.xchange.dto.marketdata.OrderBook
 import org.swtchart.Chart
 import org.swtchart.ILineSeries.PlotSymbolType
 import org.swtchart.ISeries.SeriesType
 import org.swtchart.LineStyle
-import org.swtchart.internal.series.LineSeries
 import org.swtchart.Range
-import java.util.HashMap
-import java.util.concurrent.atomic.AtomicReference
-import org.knowm.xchange.dto.marketdata.OrderBook
+import org.swtchart.internal.series.LineSeries
 
 class OrderbookHistory {
 
@@ -40,7 +40,7 @@ class OrderbookHistory {
 			axisSet.getYAxis(0).title.text = "Price"
 			axisSet.getXAxis(0).title.text = ""
 		]
-		val bufferSize = 150
+		val bufferSize = 500
 		val bidBuffer = new CircularFifoQueue<Double>(bufferSize)
 		val bid = chart.seriesSet.createSeries(SeriesType.LINE, "Bid") as LineSeries
 		bid.symbolType = PlotSymbolType.NONE
@@ -55,6 +55,7 @@ class OrderbookHistory {
 		val volume = chart.seriesSet.createSeries(SeriesType.LINE, "Volume") as LineSeries
 		volume.visibleInLegend = false
 		volume.lineStyle = LineStyle.NONE
+		volume.symbolType = PlotSymbolType.SQUARE
 		volume.symbolSize = 1
 
 		val savedColors = new HashMap<Long, Color>()

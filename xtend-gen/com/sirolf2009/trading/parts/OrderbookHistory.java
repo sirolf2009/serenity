@@ -83,7 +83,7 @@ public class OrderbookHistory {
     };
     Chart _doubleArrow = ObjectExtensions.<Chart>operator_doubleArrow(_chart, _function);
     this.chart = _doubleArrow;
-    final int bufferSize = 150;
+    final int bufferSize = 500;
     final CircularFifoQueue<Double> bidBuffer = new CircularFifoQueue<Double>(bufferSize);
     ISeries _createSeries = this.chart.getSeriesSet().createSeries(ISeries.SeriesType.LINE, "Bid");
     final LineSeries bid = ((LineSeries) _createSeries);
@@ -105,6 +105,7 @@ public class OrderbookHistory {
     final LineSeries volume = ((LineSeries) _createSeries_2);
     volume.setVisibleInLegend(false);
     volume.setLineStyle(LineStyle.NONE);
+    volume.setSymbolType(ILineSeries.PlotSymbolType.SQUARE);
     volume.setSymbolSize(1);
     final HashMap<Long, Color> savedColors = new HashMap<Long, Color>();
     Display _display_2 = parent.getDisplay();
