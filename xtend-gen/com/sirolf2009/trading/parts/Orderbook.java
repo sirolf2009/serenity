@@ -307,7 +307,7 @@ public class Orderbook {
                 int _minus_2 = (_plus_3 - (size_3).intValue());
                 it.gc.fillRectangle(_minus_2, it.y, (size_3).intValue(), (it.height - 1));
                 it.gc.setBackground(background);
-                it.gc.drawText(item.getText(4), (it.x + 4), (it.y + 2), true);
+                it.gc.drawText(item.getText(5), (it.x + 4), (it.y + 2), true);
               }
             }
           }

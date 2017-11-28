@@ -188,7 +188,7 @@ public class OrderbookHistory {
               Iterable<Pair<Double, Double>> _map = IterableExtensions.<LimitOrder, Pair<Double, Double>>map(IterableExtensions.<LimitOrder>filter(it.getBids(), _function_4), _function_5);
               final Function1<LimitOrder, Boolean> _function_6 = (LimitOrder it_1) -> {
                 double _doubleValue = it_1.getRemainingAmount().doubleValue();
-                return Boolean.valueOf((_doubleValue >= 1));
+                return Boolean.valueOf((_doubleValue <= (-1)));
               };
               final Function1<LimitOrder, Pair<Double, Double>> _function_7 = (LimitOrder it_1) -> {
                 double _doubleValue = it_1.getLimitPrice().doubleValue();

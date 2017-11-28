@@ -143,7 +143,7 @@ class Orderbook {
 					gc.background = brightRed
 					gc.fillRectangle(x + askAmount.width - size, y, size, height - 1)
 					gc.background = background
-					gc.drawText(item.getText(4), x + 4, y + 2, true)
+					gc.drawText(item.getText(5), x + 4, y + 2, true)
 				}
 				gc.background = background
 			]
