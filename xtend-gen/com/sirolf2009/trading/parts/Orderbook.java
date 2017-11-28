@@ -1,8 +1,7 @@
 package com.sirolf2009.trading.parts;
 
-import info.bitrich.xchangestream.bitfinex.BitfinexStreamingExchange;
-import info.bitrich.xchangestream.core.StreamingExchange;
-import info.bitrich.xchangestream.core.StreamingExchangeFactory;
+import com.sirolf2009.trading.Activator;
+import com.sirolf2009.trading.IExchangePart;
 import io.reactivex.functions.Consumer;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -37,12 +36,11 @@ import org.eclipse.xtext.xbase.lib.Pair;
 import org.eclipse.xtext.xbase.lib.Procedures.Procedure1;
 import org.eclipse.xtext.xbase.lib.Pure;
 import org.eclipse.xtext.xbase.lib.util.ToStringBuilder;
-import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.trade.LimitOrder;
 
 @SuppressWarnings("all")
-public class Orderbook {
+public class Orderbook implements IExchangePart {
   @Data
   public static class Entry {
     private final Optional<LimitOrder> bid;
@@ -318,12 +316,10 @@ public class Orderbook {
     };
     Table _doubleArrow = ObjectExtensions.<Table>operator_doubleArrow(_table, _function);
     this.table = _doubleArrow;
-    final StreamingExchange exchange = StreamingExchangeFactory.INSTANCE.createExchange(BitfinexStreamingExchange.class.getName());
-    exchange.connect().blockingAwait();
     final Consumer<OrderBook> _function_1 = (OrderBook it) -> {
       boolean _isDisposed = this.table.isDisposed();
       if (_isDisposed) {
-        exchange.disconnect();
+        Activator.getExchange().disconnect();
         return;
       }
       int _max = Math.max(it.getBids().size(), it.getAsks().size());
@@ -381,7 +377,7 @@ public class Orderbook {
       final Runnable _function_4 = () -> {
         boolean _isDisposed_1 = this.table.isDisposed();
         if (_isDisposed_1) {
-          exchange.disconnect();
+          Activator.getExchange().disconnect();
           return;
         }
         this.entries.clear();
@@ -391,7 +387,7 @@ public class Orderbook {
       };
       parent.getDisplay().syncExec(_function_4);
     };
-    exchange.getStreamingMarketDataService().getOrderBook(CurrencyPair.BTC_USD).subscribe(_function_1);
+    this.getOrderbook().subscribe(_function_1);
   }
   
   @Focus

@@ -1,7 +1,7 @@
 package com.sirolf2009.trading.parts
 
-import info.bitrich.xchangestream.bitfinex.BitfinexStreamingExchange
-import info.bitrich.xchangestream.core.StreamingExchangeFactory
+import com.sirolf2009.trading.Activator
+import com.sirolf2009.trading.IExchangePart
 import java.text.DecimalFormat
 import java.util.ArrayList
 import java.util.List
@@ -17,10 +17,9 @@ import org.eclipse.swt.widgets.Table
 import org.eclipse.swt.widgets.TableColumn
 import org.eclipse.swt.widgets.TableItem
 import org.eclipse.xtend.lib.annotations.Data
-import org.knowm.xchange.currency.CurrencyPair
 import org.knowm.xchange.dto.trade.LimitOrder
 
-class Orderbook {
+class Orderbook implements IExchangePart {
 
 	val List<Entry> entries = new ArrayList()
 	var Table table
@@ -148,11 +147,10 @@ class Orderbook {
 				gc.background = background
 			]
 		]
-		val exchange = StreamingExchangeFactory.INSTANCE.createExchange(BitfinexStreamingExchange.name)
-		exchange.connect().blockingAwait()
-		exchange.streamingMarketDataService.getOrderBook(CurrencyPair.BTC_USD).subscribe [
+		
+		orderbook.subscribe [
 			if(table.isDisposed) {
-				exchange.disconnect()
+				Activator.exchange.disconnect()
 				return
 			}
 			val orders = (0 ..< Math.max(bids.size(), asks.size())).map [ index |
@@ -167,7 +165,7 @@ class Orderbook {
 			]
 			parent.display.syncExec [
 				if(table.isDisposed) {
-					exchange.disconnect()
+					Activator.exchange.disconnect()
 					return
 				}
 				entries.clear()
@@ -182,7 +180,7 @@ class Orderbook {
 	def void setFocus() {
 		table.setFocus()
 	}
-
+	
 	@Data static class Entry {
 		val Optional<LimitOrder> bid
 		val Double cumulativeBid

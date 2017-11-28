@@ -1,8 +1,6 @@
 package com.sirolf2009.trading.parts;
 
-import info.bitrich.xchangestream.bitfinex.BitfinexStreamingExchange;
-import info.bitrich.xchangestream.core.StreamingExchange;
-import info.bitrich.xchangestream.core.StreamingExchangeFactory;
+import com.sirolf2009.trading.IExchangePart;
 import io.reactivex.functions.Consumer;
 import java.text.SimpleDateFormat;
 import javax.annotation.PostConstruct;
@@ -22,11 +20,10 @@ import org.eclipse.swt.widgets.TableColumn;
 import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.xtext.xbase.lib.ObjectExtensions;
 import org.eclipse.xtext.xbase.lib.Procedures.Procedure1;
-import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.marketdata.Trade;
 
 @SuppressWarnings("all")
-public class Trades {
+public class Trades implements IExchangePart {
   private final CircularFifoQueue<Trade> buffer = new CircularFifoQueue<Trade>(512);
   
   private Table table;
@@ -149,19 +146,15 @@ public class Trades {
     };
     Table _doubleArrow = ObjectExtensions.<Table>operator_doubleArrow(_table, _function);
     this.table = _doubleArrow;
-    final StreamingExchange exchange = StreamingExchangeFactory.INSTANCE.createExchange(BitfinexStreamingExchange.class.getName());
-    exchange.connect().blockingAwait();
     final Consumer<Trade> _function_1 = (Trade it) -> {
       boolean _isDisposed = this.table.isDisposed();
       if (_isDisposed) {
-        exchange.disconnect();
         return;
       }
       this.buffer.add(it);
       final Runnable _function_2 = () -> {
         boolean _isDisposed_1 = this.table.isDisposed();
         if (_isDisposed_1) {
-          exchange.disconnect();
           return;
         }
         this.table.clearAll();
@@ -169,6 +162,6 @@ public class Trades {
       };
       parent.getDisplay().syncExec(_function_2);
     };
-    exchange.getStreamingMarketDataService().getTrades(CurrencyPair.BTC_USD).subscribe(_function_1);
+    this.getTrades().subscribe(_function_1);
   }
 }

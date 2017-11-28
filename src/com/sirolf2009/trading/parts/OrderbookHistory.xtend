@@ -1,7 +1,6 @@
 package com.sirolf2009.trading.parts
 
-import info.bitrich.xchangestream.bitfinex.BitfinexStreamingExchange
-import info.bitrich.xchangestream.core.StreamingExchangeFactory
+import com.sirolf2009.trading.IExchangePart
 import java.util.HashMap
 import java.util.List
 import java.util.concurrent.atomic.AtomicReference
@@ -11,48 +10,35 @@ import java.util.stream.IntStream
 import javax.annotation.PostConstruct
 import org.apache.commons.collections4.queue.CircularFifoQueue
 import org.eclipse.e4.ui.di.Focus
-import org.eclipse.swt.SWT
 import org.eclipse.swt.graphics.Color
 import org.eclipse.swt.widgets.Composite
-import org.knowm.xchange.currency.CurrencyPair
 import org.knowm.xchange.dto.marketdata.OrderBook
 import org.swtchart.Chart
 import org.swtchart.ILineSeries.PlotSymbolType
-import org.swtchart.ISeries.SeriesType
 import org.swtchart.LineStyle
 import org.swtchart.Range
-import org.swtchart.internal.series.LineSeries
 
-class OrderbookHistory {
+class OrderbookHistory extends ChartPart implements IExchangePart {
 
 	var Chart chart
 
 	@PostConstruct
 	def void createPartControl(Composite parent) {
-		chart = new Chart(parent, SWT.NONE) => [
-			title.text = ""
-			backgroundInPlotArea = new Color(parent.display, 0, 0, 0)
-			title.foreground = new Color(parent.display, 255, 255, 255)
-			axisSet.getXAxis(0).title.foreground = new Color(parent.display, 255, 255, 255)
-			axisSet.getXAxis(0).tick.foreground = new Color(parent.display, 255, 255, 255)
-			axisSet.getYAxis(0).title.foreground = new Color(parent.display, 255, 255, 255)
-			axisSet.getYAxis(0).tick.foreground = new Color(parent.display, 255, 255, 255)
-			axisSet.getYAxis(0).title.text = "Price"
-			axisSet.getXAxis(0).title.text = ""
+		chart = parent.createChart() => [
+			yAxis.title.text = "Price"
 		]
 		val bufferSize = 500
 		val bidBuffer = new CircularFifoQueue<Double>(bufferSize)
-		val bid = chart.seriesSet.createSeries(SeriesType.LINE, "Bid") as LineSeries
+		val bid = chart.createLineSeries("Bid")
 		bid.symbolType = PlotSymbolType.NONE
-		bid.lineColor = new Color(parent.display, 0, 255, 0)
+		bid.lineColor = green
 		bid.enableStep(true)
 		val askBuffer = new CircularFifoQueue<Double>(bufferSize)
-		val ask = chart.seriesSet.createSeries(SeriesType.LINE, "Ask") as LineSeries
-		ask.symbolType = PlotSymbolType.NONE
-		ask.lineColor = new Color(parent.display, 255, 0, 0)
+		val ask = chart.createLineSeries("Ask")
+		ask.lineColor = red
 		ask.enableStep(true)
 		val volumeBuffer = new CircularFifoQueue<List<Pair<Double, Double>>>(bufferSize)
-		val volume = chart.seriesSet.createSeries(SeriesType.LINE, "Volume") as LineSeries
+		val volume = chart.createLineSeries( "Volume")
 		volume.visibleInLegend = false
 		volume.lineStyle = LineStyle.NONE
 		volume.symbolType = PlotSymbolType.SQUARE
@@ -87,11 +73,8 @@ class OrderbookHistory {
 		]
 
 		val latestOrderbook = new AtomicReference<OrderBook>()
-		val exchange = StreamingExchangeFactory.INSTANCE.createExchange(BitfinexStreamingExchange.name)
-		exchange.connect().blockingAwait()
-		exchange.streamingMarketDataService.getOrderBook(CurrencyPair.BTC_USD).subscribe [
+		orderbook.subscribe [
 			if(chart.disposed) {
-				exchange.disconnect()
 				return
 			}
 			latestOrderbook.set(it)
@@ -121,7 +104,6 @@ class OrderbookHistory {
 					].collect(Collectors.toList())
 					parent.display.syncExec [
 						if(chart.disposed) {
-							exchange.disconnect()
 							return
 						}
 						bid.YSeries = bidBuffer
@@ -129,8 +111,8 @@ class OrderbookHistory {
 						volume.XSeries = volumesX
 						volume.YSeries = volumesY
 						volume.symbolColors = volumesColor
-						chart.axisSet.adjustRange
-						chart.axisSet.getYAxis(0).range = new Range(bids.get(0).limitPrice.doubleValue() - 25, asks.get(0).limitPrice.doubleValue() + 25)
+						chart.xAxis.adjustRange()
+						chart.yAxis.range = new Range(bids.get(0).limitPrice.doubleValue() - 25, asks.get(0).limitPrice.doubleValue() + 25)
 						chart.redraw()
 					]
 				}
@@ -142,4 +124,5 @@ class OrderbookHistory {
 	def void setFocus() {
 		chart.setFocus()
 	}
+	
 }

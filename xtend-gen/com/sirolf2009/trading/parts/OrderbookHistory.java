@@ -1,9 +1,8 @@
 package com.sirolf2009.trading.parts;
 
 import com.google.common.collect.Iterables;
-import info.bitrich.xchangestream.bitfinex.BitfinexStreamingExchange;
-import info.bitrich.xchangestream.core.StreamingExchange;
-import info.bitrich.xchangestream.core.StreamingExchangeFactory;
+import com.sirolf2009.trading.IExchangePart;
+import com.sirolf2009.trading.parts.ChartPart;
 import io.reactivex.functions.Consumer;
 import java.util.Collections;
 import java.util.HashMap;
@@ -17,7 +16,6 @@ import java.util.stream.Stream;
 import javax.annotation.PostConstruct;
 import org.apache.commons.collections4.queue.CircularFifoQueue;
 import org.eclipse.e4.ui.di.Focus;
-import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
@@ -29,95 +27,57 @@ import org.eclipse.xtext.xbase.lib.IterableExtensions;
 import org.eclipse.xtext.xbase.lib.ObjectExtensions;
 import org.eclipse.xtext.xbase.lib.Pair;
 import org.eclipse.xtext.xbase.lib.Procedures.Procedure1;
-import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.swtchart.Chart;
 import org.swtchart.IAxis;
-import org.swtchart.IAxisTick;
 import org.swtchart.ILineSeries;
-import org.swtchart.ISeries;
 import org.swtchart.ITitle;
 import org.swtchart.LineStyle;
 import org.swtchart.Range;
 import org.swtchart.internal.series.LineSeries;
 
 @SuppressWarnings("all")
-public class OrderbookHistory {
+public class OrderbookHistory extends ChartPart implements IExchangePart {
   private Chart chart;
   
   @PostConstruct
   public void createPartControl(final Composite parent) {
-    Chart _chart = new Chart(parent, SWT.NONE);
+    Chart _createChart = this.createChart(parent);
     final Procedure1<Chart> _function = (Chart it) -> {
-      ITitle _title = it.getTitle();
-      _title.setText("");
-      Display _display = parent.getDisplay();
-      Color _color = new Color(_display, 0, 0, 0);
-      it.setBackgroundInPlotArea(_color);
-      ITitle _title_1 = it.getTitle();
-      Display _display_1 = parent.getDisplay();
-      Color _color_1 = new Color(_display_1, 255, 255, 255);
-      _title_1.setForeground(_color_1);
-      ITitle _title_2 = it.getAxisSet().getXAxis(0).getTitle();
-      Display _display_2 = parent.getDisplay();
-      Color _color_2 = new Color(_display_2, 255, 255, 255);
-      _title_2.setForeground(_color_2);
-      IAxisTick _tick = it.getAxisSet().getXAxis(0).getTick();
-      Display _display_3 = parent.getDisplay();
-      Color _color_3 = new Color(_display_3, 255, 255, 255);
-      _tick.setForeground(_color_3);
-      ITitle _title_3 = it.getAxisSet().getYAxis(0).getTitle();
-      Display _display_4 = parent.getDisplay();
-      Color _color_4 = new Color(_display_4, 255, 255, 255);
-      _title_3.setForeground(_color_4);
-      IAxisTick _tick_1 = it.getAxisSet().getYAxis(0).getTick();
-      Display _display_5 = parent.getDisplay();
-      Color _color_5 = new Color(_display_5, 255, 255, 255);
-      _tick_1.setForeground(_color_5);
-      ITitle _title_4 = it.getAxisSet().getYAxis(0).getTitle();
-      _title_4.setText("Price");
-      ITitle _title_5 = it.getAxisSet().getXAxis(0).getTitle();
-      _title_5.setText("");
+      ITitle _title = this.yAxis(it).getTitle();
+      _title.setText("Price");
     };
-    Chart _doubleArrow = ObjectExtensions.<Chart>operator_doubleArrow(_chart, _function);
+    Chart _doubleArrow = ObjectExtensions.<Chart>operator_doubleArrow(_createChart, _function);
     this.chart = _doubleArrow;
     final int bufferSize = 500;
     final CircularFifoQueue<Double> bidBuffer = new CircularFifoQueue<Double>(bufferSize);
-    ISeries _createSeries = this.chart.getSeriesSet().createSeries(ISeries.SeriesType.LINE, "Bid");
-    final LineSeries bid = ((LineSeries) _createSeries);
+    final LineSeries bid = this.createLineSeries(this.chart, "Bid");
     bid.setSymbolType(ILineSeries.PlotSymbolType.NONE);
-    Display _display = parent.getDisplay();
-    Color _color = new Color(_display, 0, 255, 0);
-    bid.setLineColor(_color);
+    bid.setLineColor(ChartPart.green);
     bid.enableStep(true);
     final CircularFifoQueue<Double> askBuffer = new CircularFifoQueue<Double>(bufferSize);
-    ISeries _createSeries_1 = this.chart.getSeriesSet().createSeries(ISeries.SeriesType.LINE, "Ask");
-    final LineSeries ask = ((LineSeries) _createSeries_1);
-    ask.setSymbolType(ILineSeries.PlotSymbolType.NONE);
-    Display _display_1 = parent.getDisplay();
-    Color _color_1 = new Color(_display_1, 255, 0, 0);
-    ask.setLineColor(_color_1);
+    final LineSeries ask = this.createLineSeries(this.chart, "Ask");
+    ask.setLineColor(ChartPart.red);
     ask.enableStep(true);
     final CircularFifoQueue<List<Pair<Double, Double>>> volumeBuffer = new CircularFifoQueue<List<Pair<Double, Double>>>(bufferSize);
-    ISeries _createSeries_2 = this.chart.getSeriesSet().createSeries(ISeries.SeriesType.LINE, "Volume");
-    final LineSeries volume = ((LineSeries) _createSeries_2);
+    final LineSeries volume = this.createLineSeries(this.chart, "Volume");
     volume.setVisibleInLegend(false);
     volume.setLineStyle(LineStyle.NONE);
     volume.setSymbolType(ILineSeries.PlotSymbolType.SQUARE);
     volume.setSymbolSize(1);
     final HashMap<Long, Color> savedColors = new HashMap<Long, Color>();
+    Display _display = parent.getDisplay();
+    Color _color = new Color(_display, 0, 0, 255);
+    Display _display_1 = parent.getDisplay();
+    Color _color_1 = new Color(_display_1, 0, 255, 255);
     Display _display_2 = parent.getDisplay();
-    Color _color_2 = new Color(_display_2, 0, 0, 255);
+    Color _color_2 = new Color(_display_2, 0, 255, 0);
     Display _display_3 = parent.getDisplay();
-    Color _color_3 = new Color(_display_3, 0, 255, 255);
+    Color _color_3 = new Color(_display_3, 255, 255, 0);
     Display _display_4 = parent.getDisplay();
-    Color _color_4 = new Color(_display_4, 0, 255, 0);
-    Display _display_5 = parent.getDisplay();
-    Color _color_5 = new Color(_display_5, 255, 255, 0);
-    Display _display_6 = parent.getDisplay();
-    Color _color_6 = new Color(_display_6, 255, 0, 0);
-    final List<Color> colors = Collections.<Color>unmodifiableList(CollectionLiterals.<Color>newArrayList(_color_2, _color_3, _color_4, _color_5, _color_6));
+    Color _color_4 = new Color(_display_4, 255, 0, 0);
+    final List<Color> colors = Collections.<Color>unmodifiableList(CollectionLiterals.<Color>newArrayList(_color, _color_1, _color_2, _color_3, _color_4));
     final int largeVolume = 20;
     int _size = colors.size();
     int _divide = (largeVolume / _size);
@@ -141,28 +101,25 @@ public class OrderbookHistory {
         final int r2 = c2.getRed();
         final int g2 = c2.getGreen();
         final int b2 = c2.getBlue();
-        Display _display_7 = parent.getDisplay();
+        Display _display_5 = parent.getDisplay();
         int _intValue_2 = Integer.valueOf(Math.round((r1 + ((r2 - r1) * amt)))).intValue();
         int _intValue_3 = Integer.valueOf(Math.round((g1 + ((g2 - g1) * amt)))).intValue();
         int _intValue_4 = Integer.valueOf(Math.round((b1 + ((b2 - b1) * amt)))).intValue();
-        Color _color_7 = new Color(_display_7, _intValue_2, _intValue_3, _intValue_4);
-        savedColors.put(it, _color_7);
+        Color _color_5 = new Color(_display_5, _intValue_2, _intValue_3, _intValue_4);
+        savedColors.put(it, _color_5);
       }
       return savedColors.get(it);
     };
     final Function<Long, Color> getGradient = _function_1;
     final AtomicReference<OrderBook> latestOrderbook = new AtomicReference<OrderBook>();
-    final StreamingExchange exchange = StreamingExchangeFactory.INSTANCE.createExchange(BitfinexStreamingExchange.class.getName());
-    exchange.connect().blockingAwait();
     final Consumer<OrderBook> _function_2 = (OrderBook it) -> {
       boolean _isDisposed = this.chart.isDisposed();
       if (_isDisposed) {
-        exchange.disconnect();
         return;
       }
       latestOrderbook.set(it);
     };
-    exchange.getStreamingMarketDataService().getOrderBook(CurrencyPair.BTC_USD).subscribe(_function_2);
+    this.getOrderbook().subscribe(_function_2);
     final Runnable _function_3 = () -> {
       try {
         while (true) {
@@ -225,7 +182,6 @@ public class OrderbookHistory {
               final Runnable _function_11 = () -> {
                 boolean _isDisposed_1 = this.chart.isDisposed();
                 if (_isDisposed_1) {
-                  exchange.disconnect();
                   return;
                 }
                 bid.setYSeries(((double[])Conversions.unwrapArray(bidBuffer, double.class)));
@@ -233,8 +189,8 @@ public class OrderbookHistory {
                 volume.setXSeries(((double[])Conversions.unwrapArray(volumesX, double.class)));
                 volume.setYSeries(((double[])Conversions.unwrapArray(volumesY, double.class)));
                 volume.setSymbolColors(((Color[])Conversions.unwrapArray(volumesColor, Color.class)));
-                this.chart.getAxisSet().adjustRange();
-                IAxis _yAxis = this.chart.getAxisSet().getYAxis(0);
+                this.xAxis(this.chart).adjustRange();
+                IAxis _yAxis = this.yAxis(this.chart);
                 double _doubleValue = it.getBids().get(0).getLimitPrice().doubleValue();
                 double _minus = (_doubleValue - 25);
                 double _doubleValue_1 = it.getAsks().get(0).getLimitPrice().doubleValue();

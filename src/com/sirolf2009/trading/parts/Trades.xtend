@@ -1,22 +1,20 @@
 package com.sirolf2009.trading.parts
 
-import info.bitrich.xchangestream.bitfinex.BitfinexStreamingExchange
-import info.bitrich.xchangestream.core.StreamingExchangeFactory
+import com.sirolf2009.trading.IExchangePart
+import java.text.SimpleDateFormat
 import javax.annotation.PostConstruct
 import org.apache.commons.collections4.queue.CircularFifoQueue
 import org.eclipse.swt.SWT
+import org.eclipse.swt.events.ControlEvent
+import org.eclipse.swt.events.ControlListener
+import org.eclipse.swt.graphics.Color
 import org.eclipse.swt.widgets.Composite
 import org.eclipse.swt.widgets.Table
-import org.knowm.xchange.currency.CurrencyPair
-import org.knowm.xchange.dto.marketdata.Trade
 import org.eclipse.swt.widgets.TableColumn
 import org.eclipse.swt.widgets.TableItem
-import org.eclipse.swt.events.ControlListener
-import org.eclipse.swt.events.ControlEvent
-import java.text.SimpleDateFormat
-import org.eclipse.swt.graphics.Color
+import org.knowm.xchange.dto.marketdata.Trade
 
-class Trades {
+class Trades implements IExchangePart {
 
 	val buffer = new CircularFifoQueue<Trade>(512)
 	var Table table
@@ -105,17 +103,13 @@ class Trades {
 				gc.background = background
 			]
 		]
-		val exchange = StreamingExchangeFactory.INSTANCE.createExchange(BitfinexStreamingExchange.name)
-		exchange.connect().blockingAwait()
-		exchange.streamingMarketDataService.getTrades(CurrencyPair.BTC_USD).subscribe [
+		trades.subscribe [
 			if(table.disposed) {
-				exchange.disconnect()
 				return
 			}
 			buffer.add(it)
 			parent.display.syncExec [
 				if(table.disposed) {
-					exchange.disconnect()
 					return
 				}
 				table.clearAll()
@@ -123,4 +117,5 @@ class Trades {
 			]
 		]
 	}
+	
 }
