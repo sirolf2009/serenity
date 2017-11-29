@@ -12,11 +12,18 @@ class MetricOrderbookBidVolume extends AsyncMetric implements IExchangePart {
 	def void createPartControl(Composite parent) {
 		init(parent, "Bid volume per second")
 		orderbook.subscribe [
-			val mid = bids.get(0).limitPrice.add(asks.get(0).limitPrice).divide(BigDecimal.valueOf(2)).doubleValue()
-			val bids = bids.filter[
-				mid-limitPrice.doubleValue() <= 25d
-			].map[remainingAmount.doubleValue()].reduce[a,b|a+b]
-			set(bids)
+			try {
+				val mid = bids.get(0).limitPrice.add(asks.get(0).limitPrice).divide(BigDecimal.valueOf(2)).doubleValue()
+				val bids = bids.filter [
+					mid - limitPrice.doubleValue() <= 25d
+				].map[remainingAmount.doubleValue()].reduce[a, b|a + b]
+				if(bids !== null) {
+					set(bids)
+				}
+			} catch(Exception e) {
+				System.err.println("Failed to handle " + it)
+				e.printStackTrace()
+			}
 		]
 	}
 

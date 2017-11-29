@@ -11,8 +11,8 @@ import org.swtchart.ILineSeries.PlotSymbolType
 class ChartPart {
 	
 	public static val red = new Color(null, 255, 0, 0)
-	public static val green = new Color(null, 255, 0, 0)
-	public static val blue = new Color(null, 255, 0, 0) 
+	public static val green = new Color(null, 0, 255, 0)
+	public static val blue = new Color(null, 0, 0, 255) 
 	
 	def createChart(Composite parent) {
 		new Chart(parent, SWT.NONE) => [

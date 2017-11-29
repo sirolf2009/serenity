@@ -46,14 +46,18 @@ class Orderbook implements IExchangePart {
 			table.addListener(SWT.SetData) [
 				val item = item as TableItem
 				val index = table.indexOf(item)
-				item.text = #[
-					entries.get(index).bid.map[limitPrice.toString()].orElse(""),
-					entries.get(index).bid.map[remainingAmount.toString()].orElse(""),
-					numberformat.format(entries.get(index).cumulativeBid),
-					numberformat.format(entries.get(index).cumulativeAsk),
-					entries.get(index).ask.map[remainingAmount.negate.toString()].orElse(""),
-					entries.get(index).ask.map[limitPrice.toString()].orElse("")
-				]
+				try {
+					item.text = #[
+						entries.get(index).bid.map[limitPrice.toString()].orElse(""),
+						entries.get(index).bid.map[remainingAmount.toString()].orElse(""),
+						numberformat.format(entries.get(index).cumulativeBid),
+						numberformat.format(entries.get(index).cumulativeAsk),
+						entries.get(index).ask.map[remainingAmount.negate.toString()].orElse(""),
+						entries.get(index).ask.map[limitPrice.toString()].orElse("")
+					]
+				} catch(Exception e) {
+					throw new RuntimeException("Failed to set text for "+entries.get(index), e)
+				}
 				item.setBackground(0, green)
 				item.setBackground(1, green)
 				item.setBackground(2, green)
@@ -147,7 +151,7 @@ class Orderbook implements IExchangePart {
 				gc.background = background
 			]
 		]
-		
+
 		orderbook.subscribe [
 			if(table.isDisposed) {
 				Activator.exchange.disconnect()
@@ -180,7 +184,7 @@ class Orderbook implements IExchangePart {
 	def void setFocus() {
 		table.setFocus()
 	}
-	
+
 	@Data static class Entry {
 		val Optional<LimitOrder> bid
 		val Double cumulativeBid

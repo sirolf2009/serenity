@@ -32,3 +32,6 @@
 /MetricOrderbookAskVolume.java
 /MetricOrderbookBidVolume.java
 /.MetricSpread.java._trace
+/.MetricSpread.xtendbin
+/MetricSpread.java
+/.VolumeByPrice.java._trace

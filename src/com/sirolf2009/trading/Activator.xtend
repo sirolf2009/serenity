@@ -5,10 +5,10 @@ import info.bitrich.xchangestream.core.StreamingExchange
 import info.bitrich.xchangestream.core.StreamingExchangeFactory
 import io.reactivex.Observable
 import org.knowm.xchange.currency.CurrencyPair
+import org.knowm.xchange.dto.marketdata.OrderBook
 import org.knowm.xchange.dto.marketdata.Trade
 import org.osgi.framework.BundleActivator
 import org.osgi.framework.BundleContext
-import org.knowm.xchange.dto.marketdata.OrderBook
 
 class Activator implements BundleActivator {
 

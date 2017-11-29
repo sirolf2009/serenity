@@ -112,7 +112,9 @@ class OrderbookHistory extends ChartPart implements IExchangePart {
 						volume.YSeries = volumesY
 						volume.symbolColors = volumesColor
 						chart.xAxis.adjustRange()
-						chart.yAxis.range = new Range(bids.get(0).limitPrice.doubleValue() - 25, asks.get(0).limitPrice.doubleValue() + 25)
+//						chart.yAxis.adjustRange()
+						val mid = (bids.get(0).limitPrice.doubleValue()+asks.get(0).limitPrice.doubleValue())/2
+						chart.yAxis.range = new Range(mid-(mid/100), mid+(mid/100))
 						chart.redraw()
 					]
 				}

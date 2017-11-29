@@ -190,12 +190,12 @@ public class OrderbookHistory extends ChartPart implements IExchangePart {
                 volume.setYSeries(((double[])Conversions.unwrapArray(volumesY, double.class)));
                 volume.setSymbolColors(((Color[])Conversions.unwrapArray(volumesColor, Color.class)));
                 this.xAxis(this.chart).adjustRange();
-                IAxis _yAxis = this.yAxis(this.chart);
                 double _doubleValue = it.getBids().get(0).getLimitPrice().doubleValue();
-                double _minus = (_doubleValue - 25);
                 double _doubleValue_1 = it.getAsks().get(0).getLimitPrice().doubleValue();
-                double _plus = (_doubleValue_1 + 25);
-                Range _range = new Range(_minus, _plus);
+                double _plus = (_doubleValue + _doubleValue_1);
+                final double mid = (_plus / 2);
+                IAxis _yAxis = this.yAxis(this.chart);
+                Range _range = new Range((mid - (mid / 100)), (mid + (mid / 100)));
                 _yAxis.setRange(_range);
                 this.chart.redraw();
               };

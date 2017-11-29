@@ -25,6 +25,7 @@ import org.eclipse.swt.widgets.TableColumn;
 import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.xtend.lib.annotations.Data;
 import org.eclipse.xtext.xbase.lib.DoubleExtensions;
+import org.eclipse.xtext.xbase.lib.Exceptions;
 import org.eclipse.xtext.xbase.lib.ExclusiveRange;
 import org.eclipse.xtext.xbase.lib.Functions.Function1;
 import org.eclipse.xtext.xbase.lib.Functions.Function2;
@@ -172,25 +173,36 @@ public class Orderbook implements IExchangePart {
       final Listener _function_1 = (Event it) -> {
         final TableItem item = ((TableItem) it.item);
         final int index = table.indexOf(item);
-        final Function<LimitOrder, String> _function_2 = (LimitOrder it_1) -> {
-          return it_1.getLimitPrice().toString();
-        };
-        String _orElse = this.entries.get(index).bid.<String>map(_function_2).orElse("");
-        final Function<LimitOrder, String> _function_3 = (LimitOrder it_1) -> {
-          return it_1.getRemainingAmount().toString();
-        };
-        String _orElse_1 = this.entries.get(index).bid.<String>map(_function_3).orElse("");
-        String _format = numberformat.format(this.entries.get(index).cumulativeBid);
-        String _format_1 = numberformat.format(this.entries.get(index).cumulativeAsk);
-        final Function<LimitOrder, String> _function_4 = (LimitOrder it_1) -> {
-          return it_1.getRemainingAmount().negate().toString();
-        };
-        String _orElse_2 = this.entries.get(index).ask.<String>map(_function_4).orElse("");
-        final Function<LimitOrder, String> _function_5 = (LimitOrder it_1) -> {
-          return it_1.getLimitPrice().toString();
-        };
-        String _orElse_3 = this.entries.get(index).ask.<String>map(_function_5).orElse("");
-        item.setText(new String[] { _orElse, _orElse_1, _format, _format_1, _orElse_2, _orElse_3 });
+        try {
+          final Function<LimitOrder, String> _function_2 = (LimitOrder it_1) -> {
+            return it_1.getLimitPrice().toString();
+          };
+          String _orElse = this.entries.get(index).bid.<String>map(_function_2).orElse("");
+          final Function<LimitOrder, String> _function_3 = (LimitOrder it_1) -> {
+            return it_1.getRemainingAmount().toString();
+          };
+          String _orElse_1 = this.entries.get(index).bid.<String>map(_function_3).orElse("");
+          String _format = numberformat.format(this.entries.get(index).cumulativeBid);
+          String _format_1 = numberformat.format(this.entries.get(index).cumulativeAsk);
+          final Function<LimitOrder, String> _function_4 = (LimitOrder it_1) -> {
+            return it_1.getRemainingAmount().negate().toString();
+          };
+          String _orElse_2 = this.entries.get(index).ask.<String>map(_function_4).orElse("");
+          final Function<LimitOrder, String> _function_5 = (LimitOrder it_1) -> {
+            return it_1.getLimitPrice().toString();
+          };
+          String _orElse_3 = this.entries.get(index).ask.<String>map(_function_5).orElse("");
+          item.setText(new String[] { _orElse, _orElse_1, _format, _format_1, _orElse_2, _orElse_3 });
+        } catch (final Throwable _t) {
+          if (_t instanceof Exception) {
+            final Exception e = (Exception)_t;
+            Orderbook.Entry _get = this.entries.get(index);
+            String _plus_2 = ("Failed to set text for " + _get);
+            throw new RuntimeException(_plus_2, e);
+          } else {
+            throw Exceptions.sneakyThrow(_t);
+          }
+        }
         item.setBackground(0, green);
         item.setBackground(1, green);
         item.setBackground(2, green);

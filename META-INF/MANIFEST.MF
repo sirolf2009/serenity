@@ -43,5 +43,7 @@ Bundle-ClassPath: .,
  libs/xchange-stream-core-4.3.1-SNAPSHOT.jar,
  libs/commons-collections4-4.1.jar,
  libs/org.swtchart_0.10.0.v20160212.jar,
- libs/org.swtchart.ext_0.10.0.v20160212.jar
+ libs/org.swtchart.ext_0.10.0.v20160212.jar,
+ libs/xchange-poloniex-4.3.0.jar,
+ libs/xchange-poloniex2-4.3.1-SNAPSHOT.jar
 
