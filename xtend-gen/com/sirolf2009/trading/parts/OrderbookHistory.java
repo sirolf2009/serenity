@@ -5,6 +5,7 @@ import com.sirolf2009.trading.IExchangePart;
 import com.sirolf2009.trading.parts.ChartPart;
 import io.reactivex.functions.Consumer;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
@@ -60,7 +61,7 @@ public class OrderbookHistory extends ChartPart implements IExchangePart {
     final LineSeries ask = this.createLineSeries(this.chart, "Ask");
     ask.setLineColor(ChartPart.red);
     ask.enableStep(true);
-    final CircularFifoQueue<List<Pair<Double, Double>>> volumeBuffer = new CircularFifoQueue<List<Pair<Double, Double>>>(bufferSize);
+    final CircularFifoQueue<Pair<Date, List<Pair<Double, Double>>>> volumeBuffer = new CircularFifoQueue<Pair<Date, List<Pair<Double, Double>>>>(bufferSize);
     final LineSeries volume = this.createLineSeries(this.chart, "Volume");
     volume.setVisibleInLegend(false);
     volume.setLineStyle(LineStyle.NONE);
@@ -131,6 +132,7 @@ public class OrderbookHistory extends ChartPart implements IExchangePart {
             }
             final OrderBook it = latestOrderbook.get();
             if ((it != null)) {
+              final Date now = new Date();
               bidBuffer.add(Double.valueOf(it.getBids().get(0).getLimitPrice().doubleValue()));
               askBuffer.add(Double.valueOf(it.getAsks().get(0).getLimitPrice().doubleValue()));
               final Function1<LimitOrder, Boolean> _function_4 = (LimitOrder it_1) -> {
@@ -153,30 +155,30 @@ public class OrderbookHistory extends ChartPart implements IExchangePart {
                 return Pair.<Double, Double>of(Double.valueOf(_doubleValue), Double.valueOf(_doubleValue_1));
               };
               Iterable<Pair<Double, Double>> _map_1 = IterableExtensions.<LimitOrder, Pair<Double, Double>>map(IterableExtensions.<LimitOrder>filter(it.getAsks(), _function_6), _function_7);
-              volumeBuffer.add(IterableExtensions.<Pair<Double, Double>>toList(Iterables.<Pair<Double, Double>>concat(_map, _map_1)));
-              final List<List<Pair<Double, Double>>> volumes = IterableExtensions.<List<Pair<Double, Double>>>toList(volumeBuffer);
-              final Function<List<Pair<Double, Double>>, Stream<Double>> _function_8 = (List<Pair<Double, Double>> tick) -> {
+              volumeBuffer.add(Pair.<Date, List<Pair<Double, Double>>>of(now, IterableExtensions.<Pair<Double, Double>>toList(Iterables.<Pair<Double, Double>>concat(_map, _map_1))));
+              final List<Pair<Date, List<Pair<Double, Double>>>> volumes = IterableExtensions.<Pair<Date, List<Pair<Double, Double>>>>toList(volumeBuffer);
+              final Function<Pair<Date, List<Pair<Double, Double>>>, Stream<Double>> _function_8 = (Pair<Date, List<Pair<Double, Double>>> tick) -> {
                 final IntFunction<Double> _function_9 = (int it_1) -> {
-                  return Double.valueOf(Integer.valueOf(IterableExtensions.<List<Pair<Double, Double>>>toList(volumes).indexOf(tick)).doubleValue());
+                  return Double.valueOf(Integer.valueOf(IterableExtensions.<Pair<Date, List<Pair<Double, Double>>>>toList(volumes).indexOf(tick)).doubleValue());
                 };
-                return IntStream.range(0, tick.size()).parallel().<Double>mapToObj(_function_9);
+                return IntStream.range(0, tick.getValue().size()).parallel().<Double>mapToObj(_function_9);
               };
               final List<Double> volumesX = volumeBuffer.parallelStream().<Double>flatMap(_function_8).collect(Collectors.<Double>toList());
-              final Function<List<Pair<Double, Double>>, Stream<Double>> _function_9 = (List<Pair<Double, Double>> tick) -> {
+              final Function<Pair<Date, List<Pair<Double, Double>>>, Stream<Double>> _function_9 = (Pair<Date, List<Pair<Double, Double>>> tick) -> {
                 final Function<Pair<Double, Double>, Double> _function_10 = (Pair<Double, Double> it_1) -> {
                   return it_1.getKey();
                 };
-                return tick.parallelStream().<Double>map(_function_10);
+                return tick.getValue().parallelStream().<Double>map(_function_10);
               };
               final List<Double> volumesY = volumeBuffer.parallelStream().<Double>flatMap(_function_9).collect(Collectors.<Double>toList());
-              final Function<List<Pair<Double, Double>>, Stream<Color>> _function_10 = (List<Pair<Double, Double>> tick) -> {
+              final Function<Pair<Date, List<Pair<Double, Double>>>, Stream<Color>> _function_10 = (Pair<Date, List<Pair<Double, Double>>> tick) -> {
                 final Function<Pair<Double, Double>, Double> _function_11 = (Pair<Double, Double> it_1) -> {
                   return Double.valueOf(Math.abs((it_1.getValue()).doubleValue()));
                 };
                 final Function<Double, Color> _function_12 = (Double it_1) -> {
                   return getGradient.apply(Long.valueOf(it_1.longValue()));
                 };
-                return tick.parallelStream().<Double>map(_function_11).<Color>map(_function_12);
+                return tick.getValue().parallelStream().<Double>map(_function_11).<Color>map(_function_12);
               };
               final List<Color> volumesColor = volumeBuffer.parallelStream().<Color>flatMap(_function_10).collect(Collectors.<Color>toList());
               final Runnable _function_11 = () -> {
@@ -200,6 +202,8 @@ public class OrderbookHistory extends ChartPart implements IExchangePart {
                 this.chart.redraw();
               };
               parent.getDisplay().syncExec(_function_11);
+            } else {
+              System.err.println("Orderbook is null");
             }
           }
         }

@@ -17,6 +17,7 @@ import org.swtchart.Chart
 import org.swtchart.ILineSeries.PlotSymbolType
 import org.swtchart.LineStyle
 import org.swtchart.Range
+import java.util.Date
 
 class OrderbookHistory extends ChartPart implements IExchangePart {
 
@@ -37,7 +38,7 @@ class OrderbookHistory extends ChartPart implements IExchangePart {
 		val ask = chart.createLineSeries("Ask")
 		ask.lineColor = red
 		ask.enableStep(true)
-		val volumeBuffer = new CircularFifoQueue<List<Pair<Double, Double>>>(bufferSize)
+		val volumeBuffer = new CircularFifoQueue<Pair<Date, List<Pair<Double, Double>>>>(bufferSize)
 		val volume = chart.createLineSeries( "Volume")
 		volume.visibleInLegend = false
 		volume.lineStyle = LineStyle.NONE
@@ -87,18 +88,22 @@ class OrderbookHistory extends ChartPart implements IExchangePart {
 				}
 				val it = latestOrderbook.get()
 				if(it !== null) {
+					val now = new Date()
 					bidBuffer.add(bids.get(0).limitPrice.doubleValue())
 					askBuffer.add(asks.get(0).limitPrice.doubleValue())
-					volumeBuffer.add((bids.filter[remainingAmount.doubleValue >= 1].map[limitPrice.doubleValue() -> remainingAmount.doubleValue()] + asks.filter[remainingAmount.doubleValue <= -1].map[limitPrice.doubleValue() -> remainingAmount.doubleValue()]).toList())
+					volumeBuffer.add(Pair.of(now, (bids.filter[remainingAmount.doubleValue >= 1].map[limitPrice.doubleValue() -> remainingAmount.doubleValue()] + asks.filter[remainingAmount.doubleValue <= -1].map[limitPrice.doubleValue() -> remainingAmount.doubleValue()]).toList()))
 					val volumes = volumeBuffer.toList()
 					val volumesX = volumeBuffer.parallelStream.flatMap [ tick |
-						IntStream.range(0, tick.size()).parallel().mapToObj[volumes.toList.indexOf(tick).doubleValue]
+						IntStream.range(0, tick.value.size()).parallel().mapToObj[volumes.toList.indexOf(tick).doubleValue]
+//						IntStream.range(0, tick.value.size()).parallel().mapToObj[
+//							tick.key
+//						]
 					].collect(Collectors.toList())
 					val volumesY = volumeBuffer.parallelStream.flatMap [ tick |
-						tick.parallelStream.map[key]
+						tick.value.parallelStream.map[key]
 					].collect(Collectors.toList())
 					val volumesColor = volumeBuffer.parallelStream.flatMap [ tick |
-						tick.parallelStream.map[Math.abs(value)].map [
+						tick.value.parallelStream.map[Math.abs(value)].map [
 							getGradient.apply(longValue)
 						]
 					].collect(Collectors.toList())
@@ -117,6 +122,8 @@ class OrderbookHistory extends ChartPart implements IExchangePart {
 						chart.yAxis.range = new Range(mid-(mid/100), mid+(mid/100))
 						chart.redraw()
 					]
+				} else {
+					System.err.println("Orderbook is null")
 				}
 			}
 		].start()
