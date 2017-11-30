@@ -33,7 +33,7 @@ public class MetricBuyVolumePerSecond extends Metric implements IExchangePart {
   }
   
   @Override
-  public Double get() {
+  public Double measure() {
     final double value = this.count.get();
     this.count.set(0);
     return Double.valueOf(value);

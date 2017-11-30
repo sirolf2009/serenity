@@ -1,6 +1,7 @@
 package com.sirolf2009.trading.parts
 
 import com.sirolf2009.trading.IExchangePart
+import java.util.Date
 import java.util.HashMap
 import java.util.List
 import java.util.concurrent.atomic.AtomicReference
@@ -17,7 +18,6 @@ import org.swtchart.Chart
 import org.swtchart.ILineSeries.PlotSymbolType
 import org.swtchart.LineStyle
 import org.swtchart.Range
-import java.util.Date
 
 class OrderbookHistory extends ChartPart implements IExchangePart {
 

@@ -23,7 +23,7 @@ class MetricVolumePerSecond extends Metric implements IExchangePart {
 		chart.setFocus()
 	}
 	
-	override get() {
+	override measure() {
 		val value = count.get()
 		count.set(0)
 		return value

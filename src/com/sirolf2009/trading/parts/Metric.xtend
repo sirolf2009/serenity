@@ -4,80 +4,45 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import org.apache.commons.collections4.queue.CircularFifoQueue
 import org.eclipse.swt.widgets.Composite
-import org.eclipse.swt.widgets.Display
+import org.eclipse.xtend.lib.annotations.Data
 import org.swtchart.Chart
 import org.swtchart.internal.series.LineSeries
-import java.util.Timer
-import java.util.TimerTask
-import java.util.Calendar
-import java.time.Duration
 
-abstract class Metric extends ChartPart {
+abstract class Metric extends UpdatingChartPart<MetricPoint> {
 
 	var Chart chart
 	var LineSeries series
-	var CircularFifoQueue<Double> buffer
-	var CircularFifoQueue<Date> dateBuffer
 
 	def void init(Composite parent, String name) {
 		chart = createChart(parent)
 		chart.xAxis.tick.format = new SimpleDateFormat("HH:mm:ss")
 		series = chart.createMetricSeries(name)
-		buffer = createMetricBuffer()
-		dateBuffer = createDateBuffer()
-		val timer = new Timer(name)
-		timer.scheduleAtFixedRate(new TimerTask() {
-			override run() {
-				if(chart.disposed) {
-					return
-				}
-				update(parent.display)
-			}
-		}, getFirstRunTime(), getPeriod())
+		init(chart, name)
 	}
-
-	def update(Display display) {
-		val newValue = get()
-		if(!newValue.naN) {
-			buffer.add(newValue)
-			dateBuffer.add(new Date())
-			display.syncExec [
-				if(chart.disposed) {
-					return
-				}
-				series.YSeries = buffer
-				series.XDateSeries = dateBuffer
-				chart.axisSet.adjustRange()
-				chart.redraw()
-			]
-		}
-	}
-
-	def abstract Double get()
 	
-	def getFirstRunTime() {
-        val cal = Calendar.getInstance()
-        cal.set(Calendar.MILLISECOND, 0)
-        cal.set(Calendar.SECOND, cal.get(Calendar.SECOND)+1)
-        return cal.time
-    }
-    
-    def getPeriod() {
-    	return Duration.ofSeconds(1).toMillis()
-    }
+	override get() {
+		return new MetricPoint(measure(), new Date())
+	}
+	def Double measure()
+	
+	override setData(Chart chart, CircularFifoQueue<MetricPoint> buffer) {
+		series.XDateSeries = buffer.map[time]
+		series.YSeries = buffer.map[value]
+		chart.axisSet.adjustRange()
+	}
+	
+	override isValid(MetricPoint t) {
+		return t !== null && t.value !== null && !t.value.isNaN
+	}
 
 	def createMetricSeries(Chart chart, String name) {
 		chart.createLineSeries(name) => [
 			visibleInLegend = false
 		]
 	}
-
-	def createMetricBuffer() {
-		return new CircularFifoQueue<Double>(500)
-	}
-
-	def createDateBuffer() {
-		return new CircularFifoQueue<Date>(500)
+	
+	override createBuffer() {
+		return new CircularFifoQueue<MetricPoint>(500)
 	}
 
 	def getChart() {
@@ -88,8 +53,9 @@ abstract class Metric extends ChartPart {
 		return series
 	}
 
-	def getBuffer() {
-		return buffer
-	}
+}
 
+@Data class MetricPoint {
+	Double value
+	Date time
 }

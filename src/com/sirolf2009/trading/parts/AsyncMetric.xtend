@@ -6,7 +6,7 @@ abstract class AsyncMetric extends Metric {
 
 	val AtomicDouble atom = new AtomicDouble(Double.NaN)
 
-	override get() {
+	override measure() {
 		return atom.get()
 	}
 
