@@ -10,6 +10,9 @@ import java.util.stream.Collectors
 import java.util.stream.IntStream
 import javax.annotation.PostConstruct
 import org.apache.commons.collections4.queue.CircularFifoQueue
+import org.apache.commons.math3.analysis.polynomials.PolynomialFunction
+import org.apache.commons.math3.fitting.PolynomialCurveFitter
+import org.apache.commons.math3.fitting.WeightedObservedPoint
 import org.eclipse.e4.ui.di.Focus
 import org.eclipse.swt.graphics.Color
 import org.eclipse.swt.widgets.Composite
@@ -39,11 +42,13 @@ class OrderbookHistory extends ChartPart implements IExchangePart {
 		ask.lineColor = red
 		ask.enableStep(true)
 		val volumeBuffer = new CircularFifoQueue<Pair<Date, List<Pair<Double, Double>>>>(bufferSize)
-		val volume = chart.createLineSeries( "Volume")
+		val volume = chart.createLineSeries("Volume")
 		volume.visibleInLegend = false
 		volume.lineStyle = LineStyle.NONE
 		volume.symbolType = PlotSymbolType.SQUARE
 		volume.symbolSize = 1
+		val askFit = chart.createLineSeries("AskFit")
+		askFit.lineColor = red
 
 		val savedColors = new HashMap<Long, Color>()
 		val colors = #[
@@ -78,7 +83,9 @@ class OrderbookHistory extends ChartPart implements IExchangePart {
 			if(chart.disposed) {
 				return
 			}
-			latestOrderbook.set(it)
+			if(it !== null) {
+				latestOrderbook.set(it)
+			}
 		]
 		new Thread [
 			while(true) {
@@ -107,19 +114,21 @@ class OrderbookHistory extends ChartPart implements IExchangePart {
 							getGradient.apply(longValue)
 						]
 					].collect(Collectors.toList())
+					val askFitted = askBuffer.fit()
 					parent.display.syncExec [
 						if(chart.disposed) {
 							return
 						}
 						bid.YSeries = bidBuffer
 						ask.YSeries = askBuffer
+						askFit.YSeries = askFitted
 						volume.XSeries = volumesX
 						volume.YSeries = volumesY
 						volume.symbolColors = volumesColor
 						chart.xAxis.adjustRange()
 //						chart.yAxis.adjustRange()
-						val mid = (bids.get(0).limitPrice.doubleValue()+asks.get(0).limitPrice.doubleValue())/2
-						chart.yAxis.range = new Range(mid-(mid/100), mid+(mid/100))
+						val mid = (bids.get(0).limitPrice.doubleValue() + asks.get(0).limitPrice.doubleValue()) / 2
+						chart.yAxis.range = new Range(mid - (mid / 100), mid + (mid / 100))
 						chart.redraw()
 					]
 				} else {
@@ -128,10 +137,26 @@ class OrderbookHistory extends ChartPart implements IExchangePart {
 			}
 		].start()
 	}
+	
+	def static fit(CircularFifoQueue<Double> buffer) {
+		return fit(buffer, 6)
+	}
+	
+	def static fit(CircularFifoQueue<Double> buffer, int degree) {
+		return fit(buffer.toList(), degree)
+	}
+	
+	def static fit(List<Double> trades, int degree) {
+		val fitter = PolynomialCurveFitter.create(degree)
+		val points = trades.map[new WeightedObservedPoint(1, trades.indexOf(it), it)].toList()
+		val coeffecs = fitter.fit(points)
+		val func = new PolynomialFunction(coeffecs)
+		(0 ..< trades.size()).map[func.value(it)].toList()
+	}
 
 	@Focus
 	def void setFocus() {
 		chart.setFocus()
 	}
-	
+
 }

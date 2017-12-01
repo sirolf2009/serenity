@@ -10,5 +10,13 @@
             uri="fragment.e4xmi">
       </fragment>
    </extension>
+   <extension point="org.eclipse.ui.preferencePages">
+      <page
+            category="Trading"
+            class="com.sirolf2009.trading.SerenityPreferences"
+            id="com.sirolf2009.trading.SerenityPreferences"
+            name="Serenity Preferences">
+      </page>
+   </extension>
 
 </plugin>

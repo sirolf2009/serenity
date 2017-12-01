@@ -16,6 +16,9 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import javax.annotation.PostConstruct;
 import org.apache.commons.collections4.queue.CircularFifoQueue;
+import org.apache.commons.math3.analysis.polynomials.PolynomialFunction;
+import org.apache.commons.math3.fitting.PolynomialCurveFitter;
+import org.apache.commons.math3.fitting.WeightedObservedPoint;
 import org.eclipse.e4.ui.di.Focus;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.widgets.Composite;
@@ -23,8 +26,10 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.xtext.xbase.lib.CollectionLiterals;
 import org.eclipse.xtext.xbase.lib.Conversions;
 import org.eclipse.xtext.xbase.lib.Exceptions;
+import org.eclipse.xtext.xbase.lib.ExclusiveRange;
 import org.eclipse.xtext.xbase.lib.Functions.Function1;
 import org.eclipse.xtext.xbase.lib.IterableExtensions;
+import org.eclipse.xtext.xbase.lib.ListExtensions;
 import org.eclipse.xtext.xbase.lib.ObjectExtensions;
 import org.eclipse.xtext.xbase.lib.Pair;
 import org.eclipse.xtext.xbase.lib.Procedures.Procedure1;
@@ -67,6 +72,8 @@ public class OrderbookHistory extends ChartPart implements IExchangePart {
     volume.setLineStyle(LineStyle.NONE);
     volume.setSymbolType(ILineSeries.PlotSymbolType.SQUARE);
     volume.setSymbolSize(1);
+    final LineSeries askFit = this.createLineSeries(this.chart, "AskFit");
+    askFit.setLineColor(ChartPart.red);
     final HashMap<Long, Color> savedColors = new HashMap<Long, Color>();
     Display _display = parent.getDisplay();
     Color _color = new Color(_display, 0, 0, 255);
@@ -118,7 +125,9 @@ public class OrderbookHistory extends ChartPart implements IExchangePart {
       if (_isDisposed) {
         return;
       }
-      latestOrderbook.set(it);
+      if ((it != null)) {
+        latestOrderbook.set(it);
+      }
     };
     this.getOrderbook().subscribe(_function_2);
     final Runnable _function_3 = () -> {
@@ -181,6 +190,7 @@ public class OrderbookHistory extends ChartPart implements IExchangePart {
                 return tick.getValue().parallelStream().<Double>map(_function_11).<Color>map(_function_12);
               };
               final List<Color> volumesColor = volumeBuffer.parallelStream().<Color>flatMap(_function_10).collect(Collectors.<Color>toList());
+              final List<Double> askFitted = OrderbookHistory.fit(askBuffer);
               final Runnable _function_11 = () -> {
                 boolean _isDisposed_1 = this.chart.isDisposed();
                 if (_isDisposed_1) {
@@ -188,6 +198,7 @@ public class OrderbookHistory extends ChartPart implements IExchangePart {
                 }
                 bid.setYSeries(((double[])Conversions.unwrapArray(bidBuffer, double.class)));
                 ask.setYSeries(((double[])Conversions.unwrapArray(askBuffer, double.class)));
+                askFit.setYSeries(((double[])Conversions.unwrapArray(askFitted, double.class)));
                 volume.setXSeries(((double[])Conversions.unwrapArray(volumesX, double.class)));
                 volume.setYSeries(((double[])Conversions.unwrapArray(volumesY, double.class)));
                 volume.setSymbolColors(((Color[])Conversions.unwrapArray(volumesColor, Color.class)));
@@ -212,6 +223,34 @@ public class OrderbookHistory extends ChartPart implements IExchangePart {
       }
     };
     new Thread(_function_3).start();
+  }
+  
+  public static List<Double> fit(final CircularFifoQueue<Double> buffer) {
+    return OrderbookHistory.fit(buffer, 6);
+  }
+  
+  public static List<Double> fit(final CircularFifoQueue<Double> buffer, final int degree) {
+    return OrderbookHistory.fit(IterableExtensions.<Double>toList(buffer), degree);
+  }
+  
+  public static List<Double> fit(final List<Double> trades, final int degree) {
+    List<Double> _xblockexpression = null;
+    {
+      final PolynomialCurveFitter fitter = PolynomialCurveFitter.create(degree);
+      final Function1<Double, WeightedObservedPoint> _function = (Double it) -> {
+        int _indexOf = trades.indexOf(it);
+        return new WeightedObservedPoint(1, _indexOf, (it).doubleValue());
+      };
+      final List<WeightedObservedPoint> points = IterableExtensions.<WeightedObservedPoint>toList(ListExtensions.<Double, WeightedObservedPoint>map(trades, _function));
+      final double[] coeffecs = fitter.fit(points);
+      final PolynomialFunction func = new PolynomialFunction(coeffecs);
+      int _size = trades.size();
+      final Function1<Integer, Double> _function_1 = (Integer it) -> {
+        return Double.valueOf(func.value((it).intValue()));
+      };
+      _xblockexpression = IterableExtensions.<Double>toList(IterableExtensions.<Integer, Double>map(new ExclusiveRange(0, _size, true), _function_1));
+    }
+    return _xblockexpression;
   }
   
   @Focus

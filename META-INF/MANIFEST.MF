@@ -16,7 +16,8 @@ Require-Bundle: javax.inject,
  com.google.guava,
  org.eclipse.xtext.xbase.lib,
  org.eclipse.xtend.lib,
- org.eclipse.xtend.lib.macro
+ org.eclipse.xtend.lib.macro,
+ org.eclipse.ui;bundle-version="3.109.0"
 Bundle-RequiredExecutionEnvironment: JavaSE-1.8
 Import-Package: javax.annotation;version="1.2.0"
 Bundle-ActivationPolicy: lazy
@@ -45,5 +46,6 @@ Bundle-ClassPath: .,
  libs/org.swtchart_0.10.0.v20160212.jar,
  libs/org.swtchart.ext_0.10.0.v20160212.jar,
  libs/xchange-poloniex-4.3.0.jar,
- libs/xchange-poloniex2-4.3.1-SNAPSHOT.jar
+ libs/xchange-poloniex2-4.3.1-SNAPSHOT.jar,
+ libs/commons-math3-3.6.1.jar
 
