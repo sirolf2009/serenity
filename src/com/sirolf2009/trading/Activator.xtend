@@ -8,9 +8,9 @@ import org.eclipse.ui.plugin.AbstractUIPlugin
 import org.knowm.xchange.currency.CurrencyPair
 import org.knowm.xchange.dto.marketdata.OrderBook
 import org.knowm.xchange.dto.marketdata.Trade
+import org.knowm.xchange.service.account.AccountService
 import org.osgi.framework.BundleActivator
 import org.osgi.framework.BundleContext
-import org.knowm.xchange.service.account.AccountService
 
 class Activator extends AbstractUIPlugin implements BundleActivator {
 
