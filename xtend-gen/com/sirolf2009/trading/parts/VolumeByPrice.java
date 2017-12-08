@@ -1,6 +1,7 @@
 package com.sirolf2009.trading.parts;
 
 import com.google.common.util.concurrent.AtomicDouble;
+import com.sirolf2009.commonwealth.trading.ITrade;
 import com.sirolf2009.trading.IExchangePart;
 import io.reactivex.functions.Consumer;
 import java.util.HashMap;
@@ -26,7 +27,6 @@ import org.eclipse.xtext.xbase.lib.ObjectExtensions;
 import org.eclipse.xtext.xbase.lib.Procedures.Procedure1;
 import org.eclipse.xtext.xbase.lib.Pure;
 import org.eclipse.xtext.xbase.lib.util.ToStringBuilder;
-import org.knowm.xchange.dto.marketdata.Trade;
 
 @SuppressWarnings("all")
 public class VolumeByPrice implements IExchangePart {
@@ -193,7 +193,7 @@ public class VolumeByPrice implements IExchangePart {
     };
     Table _doubleArrow = ObjectExtensions.<Table>operator_doubleArrow(_table, _function);
     this.table = _doubleArrow;
-    final Consumer<Trade> _function_1 = (Trade it) -> {
+    final Consumer<ITrade> _function_1 = (ITrade it) -> {
       boolean _isDisposed = this.table.isDisposed();
       if (_isDisposed) {
         return;
@@ -202,7 +202,7 @@ public class VolumeByPrice implements IExchangePart {
       double _divide = (_doubleValue / 10.0);
       long _round = Math.round(_divide);
       final double price = (_round * 10d);
-      final double amount = it.getOriginalAmount().doubleValue();
+      final double amount = it.getAmount().doubleValue();
       final VolumeByPrice.Entry existing = this.map.get(Double.valueOf(price));
       VolumeByPrice.Entry _xifexpression = null;
       if ((existing != null)) {

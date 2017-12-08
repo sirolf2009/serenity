@@ -1,5 +1,6 @@
 package com.sirolf2009.trading.parts
 
+import com.sirolf2009.commonwealth.trading.orderbook.ILimitOrder
 import com.sirolf2009.trading.Activator
 import com.sirolf2009.trading.IExchangePart
 import java.text.DecimalFormat
@@ -17,7 +18,6 @@ import org.eclipse.swt.widgets.Table
 import org.eclipse.swt.widgets.TableColumn
 import org.eclipse.swt.widgets.TableItem
 import org.eclipse.xtend.lib.annotations.Data
-import org.knowm.xchange.dto.trade.LimitOrder
 
 class Orderbook implements IExchangePart {
 
@@ -48,12 +48,12 @@ class Orderbook implements IExchangePart {
 				val index = table.indexOf(item)
 				try {
 					item.text = #[
-						entries.get(index).bid.map[limitPrice.toString()].orElse(""),
-						entries.get(index).bid.map[remainingAmount.toString()].orElse(""),
+						entries.get(index).bid.map[price.toString()].orElse(""),
+						entries.get(index).bid.map[amount.toString()].orElse(""),
 						numberformat.format(entries.get(index).cumulativeBid),
 						numberformat.format(entries.get(index).cumulativeAsk),
-						entries.get(index).ask.map[remainingAmount.negate.toString()].orElse(""),
-						entries.get(index).ask.map[limitPrice.toString()].orElse("")
+						entries.get(index).ask.map[(-amount.doubleValue()).toString()].orElse(""),
+						entries.get(index).ask.map[price.toString()].orElse("")
 					]
 				} catch(Exception e) {
 					throw new RuntimeException("Failed to set text for "+entries.get(index), e)
@@ -120,7 +120,7 @@ class Orderbook implements IExchangePart {
 				val item = item as TableItem
 				val index = table.indexOf(item)
 				if(it.index == 0) {
-					val size = entries.get(index).bid.map[originalAmount.intValue * 2].orElse(0)
+					val size = entries.get(index).bid.map[amount.intValue * 2].orElse(0)
 					gc.fillRectangle(x, y, width - 1, height - 1)
 					gc.background = brightGreen
 					gc.fillRectangle(x, y, size, height - 1)
@@ -141,7 +141,7 @@ class Orderbook implements IExchangePart {
 					gc.background = background
 					gc.drawText(item.getText(3), x + 4, y + 2, true)
 				} else if(it.index == 5) {
-					val size = entries.get(index).ask.map[originalAmount.intValue * -2].orElse(0)
+					val size = entries.get(index).ask.map[amount.intValue * -2].orElse(0)
 					gc.fillRectangle(x, y, width - 1, height - 1)
 					gc.background = brightRed
 					gc.fillRectangle(x + askAmount.width - size, y, size, height - 1)
@@ -163,8 +163,8 @@ class Orderbook implements IExchangePart {
 				return bid -> ask
 			].toList()
 			val newEntries = orders.map [
-				val cumulativeBid = (0 .. orders.indexOf(it)).map[orders.get(it).key.map[originalAmount.doubleValue].orElse(0d)].reduce[a, b|a + b]
-				val cumulativeAsk = (0 .. orders.indexOf(it)).map[orders.get(it).value.map[originalAmount.doubleValue * -1].orElse(0d)].reduce[a, b|a + b]
+				val cumulativeBid = (0 .. orders.indexOf(it)).map[orders.get(it).key.map[amount.doubleValue()].orElse(0d)].reduce[a, b|a + b]
+				val cumulativeAsk = (0 .. orders.indexOf(it)).map[orders.get(it).value.map[amount.doubleValue() * -1].orElse(0d)].reduce[a, b|a + b]
 				return new Entry(key, cumulativeBid, value, cumulativeAsk)
 			]
 			parent.display.syncExec [
@@ -186,9 +186,9 @@ class Orderbook implements IExchangePart {
 	}
 
 	@Data static class Entry {
-		val Optional<LimitOrder> bid
+		val Optional<ILimitOrder> bid
 		val Double cumulativeBid
-		val Optional<LimitOrder> ask
+		val Optional<ILimitOrder> ask
 		val Double cumulativeAsk
 	}
 

@@ -1,5 +1,6 @@
 package com.sirolf2009.trading.parts
 
+import com.sirolf2009.commonwealth.trading.ITrade
 import com.sirolf2009.trading.IExchangePart
 import java.text.SimpleDateFormat
 import javax.annotation.PostConstruct
@@ -12,11 +13,10 @@ import org.eclipse.swt.widgets.Composite
 import org.eclipse.swt.widgets.Table
 import org.eclipse.swt.widgets.TableColumn
 import org.eclipse.swt.widgets.TableItem
-import org.knowm.xchange.dto.marketdata.Trade
 
 class Trades implements IExchangePart {
 
-	val buffer = new CircularFifoQueue<Trade>(512)
+	val buffer = new CircularFifoQueue<ITrade>(512)
 	var Table table
 	var TableColumn time
 	var TableColumn price
@@ -39,8 +39,8 @@ class Trades implements IExchangePart {
 				val item = item as TableItem
 				val index = table.indexOf(item)
 				val trade = buffer.get(buffer.size() - 1 - index)
-				item.text = #[sdf.format(trade.timestamp), trade.price.toString(), trade.originalAmount.abs.toString()]
-				val color = if(trade.originalAmount.doubleValue > 0) green else red
+				item.text = #[sdf.format(trade.point.date), trade.price.toString(), trade.amount.toString()]
+				val color = if(trade.amount.doubleValue() > 0) green else red
 				item.setBackground(0, color)
 				item.setBackground(1, color)
 				item.setBackground(2, color)
@@ -88,7 +88,7 @@ class Trades implements IExchangePart {
 				val item = item as TableItem
 				val index = table.indexOf(item)
 				if(it.index == 0) {
-					val size = buffer.get(buffer.size() - 1 - index).originalAmount.intValue * 2
+					val size = buffer.get(buffer.size() - 1 - index).amount.intValue * 2
 					gc.fillRectangle(x, y, width - 1, height - 1)
 					if(size > 0) {
 						gc.background = brightGreen

@@ -14,7 +14,7 @@ class MetricVolumePerSecond extends Metric implements IExchangePart {
 	def void createPartControl(Composite parent) {
 		init(parent, "Volume per second")
 		trades.subscribe [
-			count.addAndGet(originalAmount.abs.doubleValue())
+			count.addAndGet(Math.abs(amount.doubleValue()))
 		]
 	}
 

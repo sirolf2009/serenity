@@ -103,7 +103,7 @@ class VolumeByPrice implements IExchangePart {
 				return
 			}
 			val price = Math.round(it.price.doubleValue()/10.0) * 10d
-			val amount = it.originalAmount.doubleValue()
+			val amount = it.amount.doubleValue()
 			val existing = map.get(price)
 			val newEntry = if(existing !== null) {
 					if(amount > 0) {

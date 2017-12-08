@@ -1,5 +1,6 @@
 package com.sirolf2009.trading.parts;
 
+import com.sirolf2009.commonwealth.trading.ITrade;
 import com.sirolf2009.trading.IExchangePart;
 import io.reactivex.functions.Consumer;
 import java.text.SimpleDateFormat;
@@ -20,11 +21,10 @@ import org.eclipse.swt.widgets.TableColumn;
 import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.xtext.xbase.lib.ObjectExtensions;
 import org.eclipse.xtext.xbase.lib.Procedures.Procedure1;
-import org.knowm.xchange.dto.marketdata.Trade;
 
 @SuppressWarnings("all")
 public class Trades implements IExchangePart {
-  private final CircularFifoQueue<Trade> buffer = new CircularFifoQueue<Trade>(512);
+  private final CircularFifoQueue<ITrade> buffer = new CircularFifoQueue<ITrade>(512);
   
   private Table table;
   
@@ -58,13 +58,13 @@ public class Trades implements IExchangePart {
         int _size = this.buffer.size();
         int _minus = (_size - 1);
         int _minus_1 = (_minus - index);
-        final Trade trade = this.buffer.get(_minus_1);
-        String _format = sdf.format(trade.getTimestamp());
+        final ITrade trade = this.buffer.get(_minus_1);
+        String _format = sdf.format(trade.getPoint().getDate());
         String _string = trade.getPrice().toString();
-        String _string_1 = trade.getOriginalAmount().abs().toString();
+        String _string_1 = trade.getAmount().toString();
         item.setText(new String[] { _format, _string, _string_1 });
         Color _xifexpression = null;
-        double _doubleValue = trade.getOriginalAmount().doubleValue();
+        double _doubleValue = trade.getAmount().doubleValue();
         boolean _greaterThan = (_doubleValue > 0);
         if (_greaterThan) {
           _xifexpression = green;
@@ -127,7 +127,7 @@ public class Trades implements IExchangePart {
           int _size = this.buffer.size();
           int _minus = (_size - 1);
           int _minus_1 = (_minus - index);
-          int _intValue = this.buffer.get(_minus_1).getOriginalAmount().intValue();
+          int _intValue = this.buffer.get(_minus_1).getAmount().intValue();
           final int size = (_intValue * 2);
           it.gc.fillRectangle(it.x, it.y, (it.width - 1), (it.height - 1));
           if ((size > 0)) {
@@ -146,7 +146,7 @@ public class Trades implements IExchangePart {
     };
     Table _doubleArrow = ObjectExtensions.<Table>operator_doubleArrow(_table, _function);
     this.table = _doubleArrow;
-    final Consumer<Trade> _function_1 = (Trade it) -> {
+    final Consumer<ITrade> _function_1 = (ITrade it) -> {
       boolean _isDisposed = this.table.isDisposed();
       if (_isDisposed) {
         return;

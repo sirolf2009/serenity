@@ -7,6 +7,7 @@ import org.swtchart.Chart
 import org.swtchart.ILineSeries.PlotSymbolType
 import org.swtchart.ISeries.SeriesType
 import org.swtchart.internal.series.LineSeries
+import org.swtchart.internal.series.BarSeries
 
 class ChartPart {
 	
@@ -33,6 +34,11 @@ class ChartPart {
 	def createLineSeries(Chart chart, String name) {
 		return chart.seriesSet.createSeries(SeriesType.LINE, name) as LineSeries => [
 			symbolType = PlotSymbolType.NONE
+		]
+	}
+	
+	def createBarSeries(Chart chart, String name) {
+		return chart.seriesSet.createSeries(SeriesType.BAR, name) as BarSeries => [
 		]
 	}
 	

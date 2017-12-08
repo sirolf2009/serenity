@@ -11,7 +11,7 @@ class MetricSpread extends AsyncMetric implements IExchangePart {
 	def void createPartControl(Composite parent) {
 		init(parent, "Spread")
 		orderbook.subscribe [
-			set(asks.get(0).limitPrice.subtract(bids.get(0).limitPrice).doubleValue())
+			set(asks.get(0).price.doubleValue()-bids.get(0).price.doubleValue())
 		]
 	}
 
