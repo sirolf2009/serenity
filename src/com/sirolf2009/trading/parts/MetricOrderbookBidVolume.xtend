@@ -8,7 +8,7 @@ import org.eclipse.swt.widgets.Composite
 class MetricOrderbookBidVolume extends AsyncMetric implements IExchangePart {
 
 	@PostConstruct
-	def void createPartControl(Composite parent) {
+	override createPartControl(Composite parent) {
 		init(parent, "Bid volume per second")
 		orderbook.subscribe [
 			try {
@@ -27,7 +27,7 @@ class MetricOrderbookBidVolume extends AsyncMetric implements IExchangePart {
 	}
 
 	@Focus
-	def void setFocus() {
+	override setFocus() {
 		chart.setFocus()
 	}
 

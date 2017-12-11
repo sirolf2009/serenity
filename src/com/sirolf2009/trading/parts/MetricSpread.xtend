@@ -8,7 +8,7 @@ import org.eclipse.swt.widgets.Composite
 class MetricSpread extends AsyncMetric implements IExchangePart {
 
 	@PostConstruct
-	def void createPartControl(Composite parent) {
+	override createPartControl(Composite parent) {
 		init(parent, "Spread")
 		orderbook.subscribe [
 			set(asks.get(0).price.doubleValue()-bids.get(0).price.doubleValue())
@@ -16,7 +16,7 @@ class MetricSpread extends AsyncMetric implements IExchangePart {
 	}
 
 	@Focus
-	def void setFocus() {
+	override setFocus() {
 		chart.setFocus()
 	}
 	

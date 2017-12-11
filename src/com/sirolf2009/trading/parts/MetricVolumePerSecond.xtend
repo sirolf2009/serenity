@@ -11,7 +11,7 @@ class MetricVolumePerSecond extends Metric implements IExchangePart {
 	val count = new AtomicDouble(0)
 
 	@PostConstruct
-	def void createPartControl(Composite parent) {
+	override createPartControl(Composite parent) {
 		init(parent, "Volume per second")
 		trades.subscribe [
 			count.addAndGet(Math.abs(amount.doubleValue()))
@@ -19,7 +19,7 @@ class MetricVolumePerSecond extends Metric implements IExchangePart {
 	}
 
 	@Focus
-	def void setFocus() {
+	override setFocus() {
 		chart.setFocus()
 	}
 	

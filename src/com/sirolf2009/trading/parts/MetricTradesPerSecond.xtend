@@ -11,7 +11,7 @@ class MetricTradesPerSecond extends Metric implements IExchangePart {
 	val count = new AtomicLong(0)
 
 	@PostConstruct
-	def void createPartControl(Composite parent) {
+	override createPartControl(Composite parent) {
 		init(parent, "Trades per second")
 		trades.subscribe [
 			count.incrementAndGet()
@@ -19,7 +19,7 @@ class MetricTradesPerSecond extends Metric implements IExchangePart {
 	}
 
 	@Focus
-	def void setFocus() {
+	override setFocus() {
 		chart.setFocus()
 	}
 	

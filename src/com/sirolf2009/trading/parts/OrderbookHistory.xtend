@@ -49,21 +49,23 @@ class OrderbookHistory extends ChartPart implements IExchangePart {
 	var zoomY = 100
 
 	@PostConstruct
-	def void createPartControl(Composite parent) {
+	override createPartControl(Composite parent) {
 		chart = parent.createChart() => [
 			yAxis.title.text = "Price"
 			addMouseWheelListener[
 				zoomY += count / 3
-				val mid = (bidBuffer.last()+askBuffer.last())/2
+				val mid = (bidBuffer.last() + askBuffer.last()) / 2
 				chart.yAxis.range = new Range(mid - (mid / zoomY), mid + (mid / zoomY))
 				chart.redraw()
 			]
 		]
 		bid = chart.createLineSeries("Bid")
 		bid.symbolType = PlotSymbolType.NONE
+		bid.lineWidth = 2
 		bid.lineColor = green
 		bid.enableStep(true)
 		ask = chart.createLineSeries("Ask")
+		ask.lineWidth = 2
 		ask.lineColor = red
 		ask.enableStep(true)
 		volume = chart.createLineSeries("Volume")
@@ -87,7 +89,7 @@ class OrderbookHistory extends ChartPart implements IExchangePart {
 			val now = new Date()
 			bidBuffer.add(bids.get(0).price.doubleValue())
 			askBuffer.add(asks.get(0).price.doubleValue())
-						
+
 			volumeBuffer.add(Pair.of(now, (bids.map[price.doubleValue() -> amount.doubleValue()] + asks.map[price.doubleValue() -> amount.doubleValue()]).toList()))
 			val volumes = volumeBuffer.toList()
 			val volumesX = volumeBuffer.parallelStream.flatMap [ tick |
@@ -116,9 +118,10 @@ class OrderbookHistory extends ChartPart implements IExchangePart {
 				volume.XSeries = volumesX
 				volume.YSeries = volumesY
 				volume.symbolColors = volumesColor
-				chart.xAxis.range = new Range(0, bidBuffer.size())
-				val mid = (bids.get(0).price.doubleValue() + asks.get(0).price.doubleValue()) / 2
-				chart.yAxis.range = new Range(mid - (mid / zoomY), mid + (mid / zoomY))
+//				chart.xAxis.range = new Range(0, bidBuffer.size())
+//				val mid = (bids.get(0).price.doubleValue() + asks.get(0).price.doubleValue()) / 2
+//				chart.yAxis.range = new Range(mid - (mid / zoomY), mid + (mid / zoomY))
+				chart.axisSet.adjustRange()
 				chart.redraw()
 			]
 		} else {
@@ -161,7 +164,7 @@ class OrderbookHistory extends ChartPart implements IExchangePart {
 	}
 
 	@Focus
-	def void setFocus() {
+	override setFocus() {
 		chart.setFocus()
 	}
 

@@ -8,8 +8,9 @@ import org.swtchart.ILineSeries.PlotSymbolType
 import org.swtchart.ISeries.SeriesType
 import org.swtchart.internal.series.LineSeries
 import org.swtchart.internal.series.BarSeries
+import org.eclipse.ui.part.ViewPart
 
-class ChartPart {
+abstract class ChartPart extends ViewPart {
 	
 	public static val red = new Color(null, 255, 0, 0)
 	public static val green = new Color(null, 0, 255, 0)

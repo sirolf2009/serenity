@@ -43,13 +43,13 @@ class Activator extends AbstractUIPlugin implements BundleActivator {
 		Activator.context = bundleContext
 		if(preferenceStore.getBoolean("authenticate")) {
 			if(!preferenceStore.getString("username").empty) {
-				val userName = preferenceStore.getString("username")
+//				val userName = preferenceStore.getString("username")
 			}
 			if(!preferenceStore.getString("apiKey").empty) {
-				val apiKey = preferenceStore.getString("apiKey")
+//				val apiKey = preferenceStore.getString("apiKey")
 			}
 			if(!preferenceStore.getString("secretKey").empty) {
-				val secretKey = preferenceStore.getString("secretKey")
+//				val secretKey = preferenceStore.getString("secretKey")
 			}
 			// TODO auth
 			connect()

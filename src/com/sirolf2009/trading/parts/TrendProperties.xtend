@@ -3,11 +3,14 @@ package com.sirolf2009.trading.parts
 import com.sirolf2009.commonwealth.timeseries.IPoint
 import com.sirolf2009.commonwealth.timeseries.Point
 import com.sirolf2009.commonwealth.timeseries.Timeseries
+import com.sirolf2009.commonwealth.timeseries.indicators.AskAvgDiff
+import com.sirolf2009.commonwealth.timeseries.indicators.AskSum
+import com.sirolf2009.commonwealth.timeseries.indicators.BidAvgDiff
+import com.sirolf2009.commonwealth.timeseries.indicators.BidSum
 import com.sirolf2009.commonwealth.timeseries.trends.IPeakTroughFinder
 import com.sirolf2009.commonwealth.timeseries.trends.PeakTroughFinderPercentage
 import com.sirolf2009.commonwealth.trading.orderbook.IOrderbook
 import com.sirolf2009.trading.IExchangePart
-import java.util.stream.IntStream
 import javax.annotation.PostConstruct
 import org.apache.commons.collections4.queue.CircularFifoQueue
 import org.eclipse.swt.graphics.Color
@@ -29,7 +32,7 @@ class TrendProperties extends ChartPart implements IExchangePart {
 	val IPeakTroughFinder peakTroughFinder = new PeakTroughFinderPercentage(0.002)
 
 	@PostConstruct
-	def void createPartControl(Composite parent) {
+	override createPartControl(Composite parent) {
 		chart = parent.createChart() => [
 			yAxis.title.text = "Value"
 			xAxis.enableCategory(true)
@@ -69,18 +72,14 @@ class TrendProperties extends ChartPart implements IExchangePart {
 			val from = extremes.get(it).point.x.intValue()
 			val to = if(it == extremes.size() - 1) mids.size() - 1 else extremes.get(it + 1).point.x.intValue()
 			val orderbooks = (from ..< to).map[buffer.get(it)].toList()
-			val averageBidSum = orderbooks.stream().mapToDouble[sumBid].average.orElse(Double.NaN)
-			val averageBidDiff = orderbooks.stream().flatMap[
-				IntStream.range(0, bids.size()-1) .mapToObj[i|
-					bids.get(i).price.doubleValue() - bids.get(i+1).price.doubleValue()
-				]
-			].mapToDouble[it].average.orElse(Double.NaN)
-			val averageAskSum = orderbooks.stream().mapToDouble[-sumAsk].average.orElse(Double.NaN)
-			val averageAskDiff = orderbooks.stream().flatMap[
-				IntStream.range(0, asks.size()-1) .mapToObj[i|
-					asks.get(i).price.doubleValue() - asks.get(i+1).price.doubleValue()
-				]
-			].mapToDouble[it].average.orElse(Double.NaN)
+			val averageBidSum = orderbooks.stream().mapToDouble[BidSum.bidSum(it)].average.orElse(Double.NaN)
+			val averageBidDiff = orderbooks.stream().mapToDouble[
+				BidAvgDiff.bidAvgDiff(it).orElse(Double.NaN)
+			].filter[!isNaN()].average.orElse(Double.NaN)
+			val averageAskSum = orderbooks.stream().mapToDouble[AskSum.askSum(it)].average.orElse(Double.NaN)
+			val averageAskDiff = orderbooks.stream().mapToDouble[
+				AskAvgDiff.askAvgDiff(it).orElse(Double.NaN)
+			].filter[!isNaN()].average.orElse(Double.NaN)
 			new Properties(averageBidSum, averageBidDiff, averageAskSum, averageAskDiff)
 		].filter[!averageBidSum.naN && !averageAskSum.naN].toList()
 		val averageBidSumSeries = properties.map[averageBidSum].toList()
@@ -100,6 +99,10 @@ class TrendProperties extends ChartPart implements IExchangePart {
 				chart.redraw()
 			]
 		}
+	}
+	
+	override setFocus() {
+		chart.setFocus()
 	}
 
 	@Data static class Properties {

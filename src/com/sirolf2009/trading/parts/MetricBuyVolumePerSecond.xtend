@@ -11,7 +11,7 @@ class MetricBuyVolumePerSecond extends Metric implements IExchangePart {
 	val count = new AtomicDouble(0)
 
 	@PostConstruct
-	def void createPartControl(Composite parent) {
+	override createPartControl(Composite parent) {
 		init(parent, "Buy volume per second")
 		trades.subscribe [
 			if(amount.doubleValue() > 0) {
@@ -21,7 +21,7 @@ class MetricBuyVolumePerSecond extends Metric implements IExchangePart {
 	}
 
 	@Focus
-	def void setFocus() {
+	override setFocus() {
 		chart.setFocus()
 	}
 	
