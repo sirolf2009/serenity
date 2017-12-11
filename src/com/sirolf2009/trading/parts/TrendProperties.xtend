@@ -7,14 +7,14 @@ import com.sirolf2009.commonwealth.timeseries.trends.IPeakTroughFinder
 import com.sirolf2009.commonwealth.timeseries.trends.PeakTroughFinderPercentage
 import com.sirolf2009.commonwealth.trading.orderbook.IOrderbook
 import com.sirolf2009.trading.IExchangePart
+import java.util.stream.IntStream
 import javax.annotation.PostConstruct
 import org.apache.commons.collections4.queue.CircularFifoQueue
+import org.eclipse.swt.graphics.Color
 import org.eclipse.swt.widgets.Composite
 import org.eclipse.xtend.lib.annotations.Data
 import org.swtchart.Chart
 import org.swtchart.internal.series.BarSeries
-import java.util.stream.IntStream
-import org.eclipse.swt.graphics.Color
 
 class TrendProperties extends ChartPart implements IExchangePart {
 
@@ -39,7 +39,7 @@ class TrendProperties extends ChartPart implements IExchangePart {
 			]
 			averageBidDiff = createBarSeries("avg bid diff") => [
 				enableStack(true)
-				barColor = new Color(parent.display, 100, 255, 100)
+				barColor = new Color(parent.display, 150, 255, 150)
 			]
 			averageAskSum = createBarSeries("avg ask") => [
 				enableStack(true)
@@ -78,7 +78,7 @@ class TrendProperties extends ChartPart implements IExchangePart {
 			val averageAskSum = orderbooks.stream().mapToDouble[-sumAsk].average.orElse(Double.NaN)
 			val averageAskDiff = orderbooks.stream().flatMap[
 				IntStream.range(0, asks.size()-1) .mapToObj[i|
-					asks.get(i+1).price.doubleValue() - asks.get(i).price.doubleValue()
+					asks.get(i).price.doubleValue() - asks.get(i+1).price.doubleValue()
 				]
 			].mapToDouble[it].average.orElse(Double.NaN)
 			new Properties(averageBidSum, averageBidDiff, averageAskSum, averageAskDiff)

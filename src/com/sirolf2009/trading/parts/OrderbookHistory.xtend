@@ -39,7 +39,7 @@ class OrderbookHistory extends ChartPart implements IExchangePart {
 		new Color(null, 255, 255, 0),
 		new Color(null, 255, 0, 0)
 	]
-	val largeVolume = 20
+	val largeVolume = 50
 	val stepSize = largeVolume / colors.size() - 1
 
 	var LineSeries bid
@@ -84,7 +84,8 @@ class OrderbookHistory extends ChartPart implements IExchangePart {
 			val now = new Date()
 			bidBuffer.add(bids.get(0).price.doubleValue())
 			askBuffer.add(asks.get(0).price.doubleValue())
-			volumeBuffer.add(Pair.of(now, (bids.filter[amount.doubleValue >= 1].map[price.doubleValue() -> amount.doubleValue()] + asks.filter[amount.doubleValue <= -1].map[price.doubleValue() -> amount.doubleValue()]).toList()))
+						
+			volumeBuffer.add(Pair.of(now, (bids.map[price.doubleValue() -> amount.doubleValue()] + asks.map[price.doubleValue() -> amount.doubleValue()]).toList()))
 			val volumes = volumeBuffer.toList()
 			val volumesX = volumeBuffer.parallelStream.flatMap [ tick |
 				IntStream.range(0, tick.value.size()).parallel().mapToObj[volumes.toList.indexOf(tick).doubleValue]

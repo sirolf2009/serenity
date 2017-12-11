@@ -1,96 +1,131 @@
 package com.sirolf2009.trading
 
-import com.sirolf2009.commonwealth.timeseries.Point
+import com.google.common.eventbus.Subscribe
+import com.sirolf2009.bitfinex.wss.BitfinexWebsocketClient
+import com.sirolf2009.bitfinex.wss.event.OnDisconnected
+import com.sirolf2009.bitfinex.wss.event.OnSubscribed
+import com.sirolf2009.bitfinex.wss.model.SubscribeOrderbook
+import com.sirolf2009.bitfinex.wss.model.SubscribeTrades
 import com.sirolf2009.commonwealth.trading.ITrade
-import com.sirolf2009.commonwealth.trading.Trade
 import com.sirolf2009.commonwealth.trading.orderbook.ILimitOrder
 import com.sirolf2009.commonwealth.trading.orderbook.IOrderbook
 import com.sirolf2009.commonwealth.trading.orderbook.LimitOrder
 import com.sirolf2009.commonwealth.trading.orderbook.Orderbook
-import info.bitrich.xchangestream.bitfinex.BitfinexStreamingExchange
-import info.bitrich.xchangestream.core.StreamingExchange
-import info.bitrich.xchangestream.core.StreamingExchangeFactory
-import io.reactivex.Observable
+import io.reactivex.disposables.Disposable
+import io.reactivex.observables.ConnectableObservable
+import io.reactivex.schedulers.Schedulers
+import io.reactivex.subjects.PublishSubject
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicLong
+import org.eclipse.core.runtime.IStatus
+import org.eclipse.core.runtime.Status
 import org.eclipse.ui.plugin.AbstractUIPlugin
-import org.knowm.xchange.currency.CurrencyPair
-import org.knowm.xchange.service.account.AccountService
 import org.osgi.framework.BundleActivator
 import org.osgi.framework.BundleContext
 
 class Activator extends AbstractUIPlugin implements BundleActivator {
 
-	private static final CurrencyPair currency = CurrencyPair.BTC_USD
 	private static Activator instance
 	private static var BundleContext context
-	private static var StreamingExchange exchange
-	private static var Observable<ITrade> trades
-	private static var Observable<IOrderbook> orderbook
-	private static var AccountService accountService
+	private static var BitfinexWebsocketClient exchange
+	private static var PublishSubject<ITrade> tradesSubject
+	private static var ConnectableObservable<ITrade> trades
+	private static var Disposable tradesConnection
+	private static var PublishSubject<IOrderbook> orderbookSubject
+	private static var ConnectableObservable<IOrderbook> orderbook
+	private static var Disposable orderbookConnection
 
 	override start(BundleContext bundleContext) throws Exception {
 		instance = this
 		Activator.context = bundleContext
 		if(preferenceStore.getBoolean("authenticate")) {
-			val spec = new BitfinexStreamingExchange().defaultExchangeSpecification
 			if(!preferenceStore.getString("username").empty) {
-				spec.userName = preferenceStore.getString("username")
+				val userName = preferenceStore.getString("username")
 			}
 			if(!preferenceStore.getString("apiKey").empty) {
-				spec.apiKey = preferenceStore.getString("apiKey")
+				val apiKey = preferenceStore.getString("apiKey")
 			}
 			if(!preferenceStore.getString("secretKey").empty) {
-				spec.secretKey = preferenceStore.getString("secretKey")
+				val secretKey = preferenceStore.getString("secretKey")
 			}
-			exchange = StreamingExchangeFactory.INSTANCE.createExchange(spec)
+			// TODO auth
+			connect()
 		} else {
-			exchange = StreamingExchangeFactory.INSTANCE.createExchange(BitfinexStreamingExchange.name)
+			connect()
 		}
-		exchange.connect().subscribe [
-			accountService = exchange.accountService
-			
-			trades = exchange.streamingMarketDataService.getTrades(currency).map[
-				new Trade(new Point(timestamp.time, price.doubleValue()), originalAmount.doubleValue()) as ITrade
-			].replay().autoConnect()
-			orderbook = exchange.streamingMarketDataService.getOrderBook(currency).map[
-				val asks = asks.map[new LimitOrder(limitPrice.doubleValue(), remainingAmount.doubleValue()) as ILimitOrder].toList()
-				val bids = bids.map[new LimitOrder(limitPrice.doubleValue(), remainingAmount.doubleValue()) as ILimitOrder].toList()
-				new Orderbook(asks, bids) as IOrderbook
-			]
+
+		tradesSubject = PublishSubject.create()
+		trades = tradesSubject.replay()
+		trades.connect()
+		orderbookSubject = PublishSubject.create()
+		orderbook = orderbookSubject.replay()
+		orderbook.connect()
+	}
+
+	def void connect() {
+		exchange = new BitfinexWebsocketClient() => [
+			eventBus.register(this)
+			new Thread [
+				connectBlocking()
+				send(new SubscribeTrades("BTCUSD"))
+				send(new SubscribeOrderbook("BTCUSD", SubscribeOrderbook.PREC_PRECISE, SubscribeOrderbook.FREQ_REALTIME))
+			].start()
 		]
+	}
+
+	@Subscribe
+	def void onSubscribed(OnSubscribed onSubscribed) {
+		onSubscribed.eventBus.register(this)
+	}
+
+	@Subscribe
+	def void onDisconnected(OnDisconnected onDisconnected) {
+		log.log(new Status(IStatus.WARNING, "serenity", "Disconnected from bitfinex. Reconnecting..."))
+		connect()
+	}
+
+	@Subscribe
+	def void onTrade(ITrade trade) {
+		try {
+			tradesSubject.onNext(trade)
+		} catch(Exception e) {
+			e.printStackTrace()
+		}
+	}
+
+	@Subscribe
+	def void onOrderbook(IOrderbook orderbook) {
+		try {
+			orderbookSubject.onNext(orderbook)
+		} catch(Exception e) {
+			e.printStackTrace()
+		}
 	}
 
 	override stop(BundleContext bundleContext) throws Exception {
 		Activator.context = null
-		exchange.disconnect()
+		exchange.close()
+		tradesConnection.dispose()
+		orderbookConnection.dispose()
 	}
-	
+
 	def static BundleContext getContext() {
 		return context
 	}
 
 	def static getTrades() {
-		return trades
+		return trades.subscribeOn(Schedulers.computation)
 	}
 
 	def static getOrderbook() {
-		return orderbook
+		return orderbook.subscribeOn(Schedulers.computation)
 	}
 
-	def static StreamingExchange getExchange() {
-		return exchange
-	}
-
-	def static AccountService getAccountService() {
-		return accountService
-	}
-	
 	def static getDefault() {
 		return instance
 	}
-	
+
 	def static getOrderbookData() {
 		val linecounter = new AtomicLong(-1)
 		Files.readAllLines(Paths.get("/home/floris/git/serenity/orderbook.csv")).map[split(",")].map [

@@ -1,7 +1,6 @@
 package com.sirolf2009.trading.parts
 
 import com.sirolf2009.commonwealth.trading.orderbook.ILimitOrder
-import com.sirolf2009.trading.Activator
 import com.sirolf2009.trading.IExchangePart
 import java.text.DecimalFormat
 import java.util.ArrayList
@@ -52,7 +51,7 @@ class Orderbook implements IExchangePart {
 						entries.get(index).bid.map[amount.toString()].orElse(""),
 						numberformat.format(entries.get(index).cumulativeBid),
 						numberformat.format(entries.get(index).cumulativeAsk),
-						entries.get(index).ask.map[(-amount.doubleValue()).toString()].orElse(""),
+						entries.get(index).ask.map[amount.doubleValue().toString()].orElse(""),
 						entries.get(index).ask.map[price.toString()].orElse("")
 					]
 				} catch(Exception e) {
@@ -154,7 +153,6 @@ class Orderbook implements IExchangePart {
 
 		orderbook.subscribe [
 			if(table.isDisposed) {
-				Activator.exchange.disconnect()
 				return
 			}
 			val orders = (0 ..< Math.max(bids.size(), asks.size())).map [ index |
@@ -164,12 +162,11 @@ class Orderbook implements IExchangePart {
 			].toList()
 			val newEntries = orders.map [
 				val cumulativeBid = (0 .. orders.indexOf(it)).map[orders.get(it).key.map[amount.doubleValue()].orElse(0d)].reduce[a, b|a + b]
-				val cumulativeAsk = (0 .. orders.indexOf(it)).map[orders.get(it).value.map[amount.doubleValue() * -1].orElse(0d)].reduce[a, b|a + b]
+				val cumulativeAsk = (0 .. orders.indexOf(it)).map[orders.get(it).value.map[amount.doubleValue()].orElse(0d)].reduce[a, b|a + b]
 				return new Entry(key, cumulativeBid, value, cumulativeAsk)
 			]
 			parent.display.syncExec [
 				if(table.isDisposed) {
-					Activator.exchange.disconnect()
 					return
 				}
 				entries.clear()

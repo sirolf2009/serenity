@@ -16,11 +16,4 @@ interface IExchangePart {
 		return Activator.trades
 	}
 	
-	def getAccountService() {
-		while(Activator.accountService === null) {
-			Thread.sleep(100)
-		}
-		return Activator.accountService
-	}
-	
 }

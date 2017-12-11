@@ -38,8 +38,7 @@ class ChartPart {
 	}
 	
 	def createBarSeries(Chart chart, String name) {
-		return chart.seriesSet.createSeries(SeriesType.BAR, name) as BarSeries => [
-		]
+		return chart.seriesSet.createSeries(SeriesType.BAR, name) as BarSeries
 	}
 	
 	def xAxis(Chart chart) {
