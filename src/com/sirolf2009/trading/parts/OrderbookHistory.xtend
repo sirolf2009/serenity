@@ -54,6 +54,9 @@ class OrderbookHistory extends ChartPart implements IExchangePart {
 			yAxis.title.text = "Price"
 			addMouseWheelListener[
 				zoomY += count / 3
+				val mid = (bidBuffer.last()+askBuffer.last())/2
+				chart.yAxis.range = new Range(mid - (mid / zoomY), mid + (mid / zoomY))
+				chart.redraw()
 			]
 		]
 		bid = chart.createLineSeries("Bid")

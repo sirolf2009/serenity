@@ -23,10 +23,12 @@ import org.eclipse.core.runtime.Status
 import org.eclipse.ui.plugin.AbstractUIPlugin
 import org.osgi.framework.BundleActivator
 import org.osgi.framework.BundleContext
+import java.util.concurrent.atomic.AtomicBoolean
 
 class Activator extends AbstractUIPlugin implements BundleActivator {
 
-	private static Activator instance
+	private static val shouldReconnect = new AtomicBoolean(true)
+	private static var Activator instance
 	private static var BundleContext context
 	private static var BitfinexWebsocketClient exchange
 	private static var PublishSubject<ITrade> tradesSubject
@@ -81,8 +83,12 @@ class Activator extends AbstractUIPlugin implements BundleActivator {
 
 	@Subscribe
 	def void onDisconnected(OnDisconnected onDisconnected) {
-		log.log(new Status(IStatus.WARNING, "serenity", "Disconnected from bitfinex. Reconnecting..."))
-		connect()
+		if(shouldReconnect.get()) {
+			log.log(new Status(IStatus.WARNING, "serenity", "Disconnected from bitfinex. Reconnecting..."))
+			connect()
+		} else {
+			log.log(new Status(IStatus.INFO, "serenity", "Disconnected from bitfinex."))
+		}
 	}
 
 	@Subscribe
@@ -105,6 +111,7 @@ class Activator extends AbstractUIPlugin implements BundleActivator {
 
 	override stop(BundleContext bundleContext) throws Exception {
 		Activator.context = null
+		shouldReconnect.set(false)
 		exchange.close()
 		tradesConnection.dispose()
 		orderbookConnection.dispose()
