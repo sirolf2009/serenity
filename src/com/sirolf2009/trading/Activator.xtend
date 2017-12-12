@@ -112,9 +112,12 @@ class Activator extends AbstractUIPlugin implements BundleActivator {
 	override stop(BundleContext bundleContext) throws Exception {
 		Activator.context = null
 		shouldReconnect.set(false)
-		exchange.close()
-		tradesConnection.dispose()
-		orderbookConnection.dispose()
+		exchange?.close()
+		exchange = null
+		tradesConnection?.dispose()
+		tradesConnection = null
+		orderbookConnection?.dispose()
+		orderbookConnection = null
 	}
 
 	def static BundleContext getContext() {

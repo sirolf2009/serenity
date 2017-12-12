@@ -18,5 +18,35 @@
             name="Serenity Preferences">
       </page>
    </extension>
+   <extension
+         point="org.eclipse.ui.views">
+      <view
+            allowMultiple="true"
+            category="Trading"
+            class="com.sirolf2009.trading.parts.IndicatorAskSum"
+            icon="icons/Sample.png"
+            id="com.sirolf2009.trading.parts.IndicatorAskSum"
+            name="Ask Volume"
+            restorable="true">
+      </view>
+      <view
+            allowMultiple="true"
+            category="Trading"
+            class="com.sirolf2009.trading.parts.IndicatorBidSum"
+            icon="icons/Sample.png"
+            id="com.sirolf2009.trading.parts.IndicatorBidSum"
+            name="Bid Volume"
+            restorable="true">
+      </view>
+      <view
+            allowMultiple="true"
+            category="Trading"
+            class="com.sirolf2009.trading.parts.IndicatorSpread"
+            icon="icons/Sample.png"
+            id="com.sirolf2009.trading.parts.IndicatorSpread"
+            name="Spread"
+            restorable="true">
+      </view>
+   </extension>
 
 </plugin>
