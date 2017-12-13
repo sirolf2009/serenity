@@ -9,14 +9,15 @@ import org.swtchart.ISeries.SeriesType
 import org.swtchart.internal.series.LineSeries
 import org.swtchart.internal.series.BarSeries
 import org.eclipse.ui.part.ViewPart
+import org.eclipse.swt.widgets.Display
 
 abstract class ChartPart extends ViewPart {
 	
-	public static val red = new Color(null, 255, 0, 0)
-	public static val green = new Color(null, 0, 255, 0)
-	public static val blue = new Color(null, 0, 0, 255) 
-	public static val white = new Color(null, 255, 255, 255)
-	public static val black = new Color(null, 0, 0, 0)
+	public static val red = new Color(Display.^default, 255, 0, 0)
+	public static val green = new Color(Display.^default, 0, 255, 0)
+	public static val blue = new Color(Display.^default, 0, 0, 255) 
+	public static val white = new Color(Display.^default, 255, 255, 255)
+	public static val black = new Color(Display.^default, 0, 0, 0)
 	
 	def createChart(Composite parent) {
 		new Chart(parent, SWT.NONE) => [

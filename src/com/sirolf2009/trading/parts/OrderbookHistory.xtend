@@ -81,6 +81,11 @@ class OrderbookHistory extends ChartPart implements IExchangePart {
 				zoom(count / 3)
 			]
 
+			volume = createLineSeries("Volume")
+			volume.visibleInLegend = false
+			volume.lineStyle = LineStyle.NONE
+			volume.symbolType = PlotSymbolType.SQUARE
+			volume.symbolSize = 1
 			bid = createLineSeries("Bid")
 			bid.symbolType = PlotSymbolType.NONE
 			bid.lineWidth = 2
@@ -90,11 +95,6 @@ class OrderbookHistory extends ChartPart implements IExchangePart {
 			ask.lineWidth = 2
 			ask.lineColor = red
 			ask.enableStep(true)
-			volume = createLineSeries("Volume")
-			volume.visibleInLegend = false
-			volume.lineStyle = LineStyle.NONE
-			volume.symbolType = PlotSymbolType.SQUARE
-			volume.symbolSize = 1
 			
 			Activator.orderbookPrimer.forEach[addOrderbookToBuffer]
 
@@ -111,9 +111,7 @@ class OrderbookHistory extends ChartPart implements IExchangePart {
 		def receiveOrderbook(IOrderbook it) {
 			if(it !== null) {
 				addOrderbookToBuffer()
-//				val volumes = volumeBuffer.toList()
 				val volumesX = volumeBuffer.parallelStream.flatMap [ tick |
-//					IntStream.range(0, tick.value.size()).parallel().mapToObj[volumes.toList.indexOf(tick).doubleValue]
 						IntStream.range(0, tick.value.size()).parallel().mapToObj[
 							tick.key
 						]
