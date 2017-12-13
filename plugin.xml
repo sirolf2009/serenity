@@ -47,6 +47,24 @@
             name="Spread"
             restorable="true">
       </view>
+      <view
+            allowMultiple="true"
+            category="Trading"
+            class="com.sirolf2009.trading.parts.IndicatorSellVolume"
+            icon="icons/Sample.png"
+            id="com.sirolf2009.trading.parts.IndicatorSellVolume"
+            name="Sell Volume"
+            restorable="true">
+      </view>
+      <view
+            allowMultiple="true"
+            category="Trading"
+            class="com.sirolf2009.trading.parts.IndicatorBuyVolume"
+            icon="icons/Sample.png"
+            id="com.sirolf2009.trading.parts.IndicatorBuyVolume"
+            name="Buy Volume"
+            restorable="true">
+      </view>
    </extension>
 
 </plugin>
