@@ -1,7 +1,9 @@
 package com.sirolf2009.trading.parts
 
 import com.sirolf2009.commonwealth.trading.orderbook.IOrderbook
+import com.sirolf2009.trading.Activator
 import com.sirolf2009.trading.IExchangePart
+import java.time.Duration
 import java.util.Date
 import java.util.HashMap
 import java.util.List
@@ -20,7 +22,6 @@ import org.swtchart.ISeries.SeriesType
 import org.swtchart.LineStyle
 import org.swtchart.Range
 import org.swtchart.internal.series.LineSeries
-import com.sirolf2009.trading.Activator
 
 class OrderbookHistory extends ChartPart implements IExchangePart {
 
@@ -38,10 +39,13 @@ class OrderbookHistory extends ChartPart implements IExchangePart {
 
 	static class OrderbookHistoryComponent extends Chart implements IExchangePart {
 
-		val bufferSize = 5000
+		val bufferSize = 50000
 		val bidBuffer = new CircularFifoQueue<Double>(bufferSize)
+		val bidAskDateBuffer = new CircularFifoQueue<Date>(bufferSize)
 		val askBuffer = new CircularFifoQueue<Double>(bufferSize)
 		val volumeBuffer = new CircularFifoQueue<Pair<Date, List<Pair<Double, Double>>>>(bufferSize)
+		val updateInterval = Duration.ofSeconds(0).toMillis()
+		var Date lastUpdate = null
 
 		val savedColors = new HashMap<Long, Color>()
 		val colors = #[
@@ -107,12 +111,12 @@ class OrderbookHistory extends ChartPart implements IExchangePart {
 		def receiveOrderbook(IOrderbook it) {
 			if(it !== null) {
 				addOrderbookToBuffer()
-				val volumes = volumeBuffer.toList()
+//				val volumes = volumeBuffer.toList()
 				val volumesX = volumeBuffer.parallelStream.flatMap [ tick |
-					IntStream.range(0, tick.value.size()).parallel().mapToObj[volumes.toList.indexOf(tick).doubleValue]
-//						IntStream.range(0, tick.value.size()).parallel().mapToObj[
-//							tick.key
-//						]
+//					IntStream.range(0, tick.value.size()).parallel().mapToObj[volumes.toList.indexOf(tick).doubleValue]
+						IntStream.range(0, tick.value.size()).parallel().mapToObj[
+							tick.key
+						]
 				].collect(Collectors.toList())
 				val volumesY = volumeBuffer.parallelStream.flatMap [ tick |
 					tick.value.parallelStream.map[key]
@@ -131,7 +135,9 @@ class OrderbookHistory extends ChartPart implements IExchangePart {
 					}
 					bid.YSeries = bidBuffer
 					ask.YSeries = askBuffer
-					volume.XSeries = volumesX
+					bid.XDateSeries = bidAskDateBuffer
+					ask.XDateSeries = bidAskDateBuffer
+					volume.XDateSeries = volumesX
 					volume.YSeries = volumesY
 					volume.symbolColors = volumesColor
 					adjustRange()
@@ -142,9 +148,10 @@ class OrderbookHistory extends ChartPart implements IExchangePart {
 		}
 		
 		def addOrderbookToBuffer(IOrderbook it) {
-			if(it !== null) {
+			if(it !== null && (lastUpdate === null || timestamp.time-lastUpdate.time >= updateInterval)) {
 				bidBuffer.add(bids.get(0).price.doubleValue())
 				askBuffer.add(asks.get(0).price.doubleValue())
+				bidAskDateBuffer.add(timestamp)
 
 				volumeBuffer.add(Pair.of(timestamp, (bids.map[price.doubleValue() -> amount.doubleValue()] + asks.map[price.doubleValue() -> amount.doubleValue()]).toList()))
 			}
