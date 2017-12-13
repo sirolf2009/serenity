@@ -5,7 +5,6 @@ import com.sirolf2009.trading.IExchangePart
 import java.util.Date
 import java.util.HashMap
 import java.util.List
-import java.util.concurrent.TimeUnit
 import java.util.stream.Collectors
 import java.util.stream.IntStream
 import javax.annotation.PostConstruct
@@ -15,15 +14,16 @@ import org.eclipse.swt.SWT
 import org.eclipse.swt.graphics.Color
 import org.eclipse.swt.widgets.Composite
 import org.swtchart.Chart
+import org.swtchart.IAxis.Position
 import org.swtchart.ILineSeries.PlotSymbolType
 import org.swtchart.ISeries.SeriesType
 import org.swtchart.LineStyle
 import org.swtchart.Range
 import org.swtchart.internal.series.LineSeries
-import org.swtchart.IAxis.Position
+import com.sirolf2009.trading.Activator
 
 class OrderbookHistory extends ChartPart implements IExchangePart {
-	
+
 	var OrderbookHistoryComponent chart
 
 	@PostConstruct
@@ -62,21 +62,21 @@ class OrderbookHistory extends ChartPart implements IExchangePart {
 
 		new(Composite parent) {
 			super(parent, SWT.NONE)
-				backgroundInPlotArea = black
-				title.foreground = white
-				title.text = ""
-				xAxis.tick.foreground = white
-				xAxis.title.foreground = white
-				xAxis.title.text = ""
-				yAxis.tick.foreground = white
-				yAxis.title.foreground = white
-				yAxis.title.text = "Price"
-				yAxis.position = Position.Secondary
-				legend.visible = false
-				addMouseWheelListener[
-					zoom(count / 3)
-				]
-			
+			backgroundInPlotArea = black
+			title.foreground = white
+			title.text = ""
+			xAxis.tick.foreground = white
+			xAxis.title.foreground = white
+			xAxis.title.text = ""
+			yAxis.tick.foreground = white
+			yAxis.title.foreground = white
+			yAxis.title.text = "Price"
+			yAxis.position = Position.Secondary
+			legend.visible = false
+			addMouseWheelListener[
+				zoom(count / 3)
+			]
+
 			bid = createLineSeries("Bid")
 			bid.symbolType = PlotSymbolType.NONE
 			bid.lineWidth = 2
@@ -91,8 +91,10 @@ class OrderbookHistory extends ChartPart implements IExchangePart {
 			volume.lineStyle = LineStyle.NONE
 			volume.symbolType = PlotSymbolType.SQUARE
 			volume.symbolSize = 1
+			
+			Activator.orderbookPrimer.forEach[addOrderbookToBuffer]
 
-			orderbook.sample(1, TimeUnit.SECONDS).subscribe [
+			orderbook.subscribe [
 				if(disposed) {
 					return
 				}
@@ -104,11 +106,7 @@ class OrderbookHistory extends ChartPart implements IExchangePart {
 
 		def receiveOrderbook(IOrderbook it) {
 			if(it !== null) {
-				val now = new Date()
-				bidBuffer.add(bids.get(0).price.doubleValue())
-				askBuffer.add(asks.get(0).price.doubleValue())
-
-				volumeBuffer.add(Pair.of(now, (bids.map[price.doubleValue() -> amount.doubleValue()] + asks.map[price.doubleValue() -> amount.doubleValue()]).toList()))
+				addOrderbookToBuffer()
 				val volumes = volumeBuffer.toList()
 				val volumesX = volumeBuffer.parallelStream.flatMap [ tick |
 					IntStream.range(0, tick.value.size()).parallel().mapToObj[volumes.toList.indexOf(tick).doubleValue]
@@ -140,6 +138,15 @@ class OrderbookHistory extends ChartPart implements IExchangePart {
 				]
 			} else {
 				System.err.println("Orderbook is null")
+			}
+		}
+		
+		def addOrderbookToBuffer(IOrderbook it) {
+			if(it !== null) {
+				bidBuffer.add(bids.get(0).price.doubleValue())
+				askBuffer.add(asks.get(0).price.doubleValue())
+
+				volumeBuffer.add(Pair.of(timestamp, (bids.map[price.doubleValue() -> amount.doubleValue()] + asks.map[price.doubleValue() -> amount.doubleValue()]).toList()))
 			}
 		}
 
