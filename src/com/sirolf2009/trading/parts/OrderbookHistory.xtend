@@ -44,7 +44,7 @@ class OrderbookHistory extends ChartPart implements IExchangePart {
 		val bidAskDateBuffer = new CircularFifoQueue<Date>(bufferSize)
 		val askBuffer = new CircularFifoQueue<Double>(bufferSize)
 		val volumeBuffer = new CircularFifoQueue<Pair<Date, List<Pair<Double, Double>>>>(bufferSize)
-		val updateInterval = Duration.ofSeconds(0).toMillis()
+		val updateInterval = Duration.ofSeconds(2).toMillis()
 		var Date lastUpdate = null
 
 		val savedColors = new HashMap<Long, Color>()

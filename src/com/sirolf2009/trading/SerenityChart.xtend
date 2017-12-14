@@ -90,8 +90,8 @@ class SerenityChart extends Chart implements IExchangePart {
 
 	def tick(Date timestamp) {
 		val currentTrades = trades.stream.collect(Collectors.toList())
-		currentTrades.clear()
-		tick(new Tick(timestamp, orderbook.get(), trades))
+		trades.clear()
+		tick(new Tick(timestamp, orderbook.get(), currentTrades))
 	}
 
 	def tick(ITick tick) {
