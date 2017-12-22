@@ -22,6 +22,10 @@ import org.swtchart.ISeries.SeriesType
 import org.swtchart.LineStyle
 import org.swtchart.Range
 import org.swtchart.internal.series.LineSeries
+import com.sirolf2009.commonwealth.timeseries.trends.PeakTroughFinderPercentage
+import com.sirolf2009.commonwealth.timeseries.IPoint
+import com.sirolf2009.commonwealth.timeseries.Point
+import com.sirolf2009.commonwealth.timeseries.Timeseries
 
 class OrderbookHistory extends ChartPart implements IExchangePart {
 
@@ -43,7 +47,9 @@ class OrderbookHistory extends ChartPart implements IExchangePart {
 		val bidBuffer = new CircularFifoQueue<Double>(bufferSize)
 		val bidAskDateBuffer = new CircularFifoQueue<Date>(bufferSize)
 		val askBuffer = new CircularFifoQueue<Double>(bufferSize)
+		val midBuffer = new CircularFifoQueue<IPoint>(bufferSize)
 		val volumeBuffer = new CircularFifoQueue<Pair<Date, List<Pair<Double, Double>>>>(bufferSize)
+		val peakTroughFinder = new PeakTroughFinderPercentage(0.02)
 		val updateInterval = Duration.ofSeconds(0).toMillis()
 		var Date lastUpdate = null
 
@@ -61,8 +67,9 @@ class OrderbookHistory extends ChartPart implements IExchangePart {
 		var LineSeries bid
 		var LineSeries ask
 		var LineSeries volume
+		var LineSeries peaksTrough
 
-		var zoomY = 100
+		var zoomY = 49
 
 		new(Composite parent) {
 			super(parent, SWT.NONE)
@@ -86,6 +93,12 @@ class OrderbookHistory extends ChartPart implements IExchangePart {
 			volume.lineStyle = LineStyle.NONE
 			volume.symbolType = PlotSymbolType.SQUARE
 			volume.symbolSize = 1
+			peaksTrough = createLineSeries("PeakTrough")
+			peaksTrough.visibleInLegend = false
+			peaksTrough.lineStyle = LineStyle.NONE
+			peaksTrough.symbolType = PlotSymbolType.TRIANGLE
+			peaksTrough.symbolSize = 4
+			peaksTrough.symbolColor = blue
 			bid = createLineSeries("Bid")
 			bid.symbolType = PlotSymbolType.NONE
 			bid.lineWidth = 2
@@ -124,6 +137,9 @@ class OrderbookHistory extends ChartPart implements IExchangePart {
 						getGradient(longValue)
 					]
 				].collect(Collectors.toList())
+				val reversals = peakTroughFinder.apply(new Timeseries(midBuffer.toList())).map[point]
+				val reversalsX = reversals.map[new Date(x.longValue)]
+				val reversalsY = reversals.map[y.doubleValue]
 				if(disposed) {
 					return
 				}
@@ -138,6 +154,8 @@ class OrderbookHistory extends ChartPart implements IExchangePart {
 					volume.XDateSeries = volumesX
 					volume.YSeries = volumesY
 					volume.symbolColors = volumesColor
+					peaksTrough.XDateSeries = reversalsX
+					peaksTrough.YSeries = reversalsY
 					adjustRange()
 				]
 			} else {
@@ -152,6 +170,7 @@ class OrderbookHistory extends ChartPart implements IExchangePart {
 				bidAskDateBuffer.add(timestamp)
 
 				volumeBuffer.add(Pair.of(timestamp, (bids.map[price.doubleValue() -> amount.doubleValue()] + asks.map[price.doubleValue() -> amount.doubleValue()]).toList()))
+				midBuffer.add(new Point(timestamp.time, (bidBuffer.last+askBuffer.last)/2))
 			}
 		}
 
