@@ -8,21 +8,31 @@ import com.sirolf2009.bitfinex.wss.event.OnDisconnected
 import com.sirolf2009.bitfinex.wss.event.OnSubscribed
 import com.sirolf2009.bitfinex.wss.model.SubscribeOrderbook
 import com.sirolf2009.bitfinex.wss.model.SubscribeTrades
+import com.sirolf2009.commonwealth.ITick
+import com.sirolf2009.commonwealth.Tick
 import com.sirolf2009.commonwealth.trading.ITrade
 import com.sirolf2009.commonwealth.trading.orderbook.ILimitOrder
 import com.sirolf2009.commonwealth.trading.orderbook.IOrderbook
 import com.sirolf2009.commonwealth.trading.orderbook.LimitOrder
 import com.sirolf2009.commonwealth.trading.orderbook.Orderbook
-import io.reactivex.disposables.Disposable
-import io.reactivex.observables.ConnectableObservable
-import io.reactivex.schedulers.Schedulers
-import io.reactivex.subjects.PublishSubject
+import com.sirolf2009.serenity.collector.Collector
 import java.net.URL
 import java.nio.charset.Charset
+import java.nio.file.Files
+import java.nio.file.Paths
+import java.time.Duration
 import java.util.ArrayList
+import java.util.Calendar
+import java.util.Collections
 import java.util.Date
 import java.util.List
+import java.util.Timer
+import java.util.TimerTask
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicReference
+import java.util.function.Consumer
+import java.util.stream.Collectors
 import org.apache.commons.io.IOUtils
 import org.eclipse.core.runtime.IStatus
 import org.eclipse.core.runtime.Status
@@ -30,38 +40,46 @@ import org.eclipse.jface.preference.IPreferenceStore
 import org.eclipse.ui.plugin.AbstractUIPlugin
 import org.osgi.framework.BundleActivator
 import org.osgi.framework.BundleContext
+import com.google.common.eventbus.EventBus
 
 class Activator extends AbstractUIPlugin implements BundleActivator {
 
 	private static val shouldReconnect = new AtomicBoolean(true)
+	private static val List<ITrade> tickTrades = Collections.synchronizedList(new ArrayList())
+	private static val tickOrderbook = new AtomicReference<IOrderbook>()
+	private static val data = new EventBus()
 	private static var Activator instance
 	private static var BundleContext context
 	private static var BitfinexWebsocketClient exchange
-	private static var PublishSubject<ITrade> tradesSubject
-	private static var ConnectableObservable<ITrade> trades
-	private static var Disposable tradesConnection
-	private static var PublishSubject<IOrderbook> orderbookSubject
-	private static var ConnectableObservable<IOrderbook> orderbook
-	private static var Disposable orderbookConnection
 	private static var List<IOrderbook> orderbookPrimer
 
 	override start(BundleContext bundleContext) throws Exception {
 		instance = this
 		Activator.context = bundleContext
-		tradesSubject = PublishSubject.create()
-		trades = tradesSubject.replay()
-		trades.connect()
-		orderbookSubject = PublishSubject.create()
-		orderbook = orderbookSubject.replay()
-		orderbook.connect()
-		
+
+		val timer = new Timer()
+		timer.scheduleAtFixedRate(new TimerTask() {
+			override run() {
+				new Thread [
+					val timestamp = new Date(scheduledExecutionTime)
+					val currentTrades = tickTrades.stream.collect(Collectors.toList())
+					tickTrades.clear()
+					val orderbook = tickOrderbook.get()
+					if(orderbook !== null) {
+						println("Timer		" + orderbook.timestamp + "	" + orderbook.asks.get(0).price)
+						data.post(new Tick(timestamp, orderbook, currentTrades))
+					}
+				].start()
+			}
+		}, getFirstRunTime(), getPeriod())
+
 		try {
 			orderbookPrimer = getOrderbooksFromApi("serenity").toList()
+//			orderbookPrimer = getOrderbookData()
 		} catch(Exception e) {
 			log.log(new Status(IStatus.WARNING, "serenity", "Could not prime the orderbook", e))
 			orderbookPrimer = new ArrayList()
 		}
-		
 		if(preferenceStore.getBoolean("authenticate")) {
 			if(!preferenceStore.getString("username").empty) {
 //				val userName = preferenceStore.getString("username")
@@ -108,7 +126,8 @@ class Activator extends AbstractUIPlugin implements BundleActivator {
 	@Subscribe
 	def void onTrade(ITrade trade) {
 		try {
-			tradesSubject.onNext(trade)
+			data.post(trade)
+			tickTrades.add(trade)
 		} catch(Exception e) {
 			e.printStackTrace()
 		}
@@ -117,7 +136,8 @@ class Activator extends AbstractUIPlugin implements BundleActivator {
 	@Subscribe
 	def void onOrderbook(IOrderbook orderbook) {
 		try {
-			orderbookSubject.onNext(orderbook)
+			data.post(orderbook)
+			tickOrderbook.set(orderbook)
 		} catch(Exception e) {
 			e.printStackTrace()
 		}
@@ -128,12 +148,8 @@ class Activator extends AbstractUIPlugin implements BundleActivator {
 		shouldReconnect.set(false)
 		exchange?.close()
 		exchange = null
-		tradesConnection?.dispose()
-		tradesConnection = null
-		orderbookConnection?.dispose()
-		orderbookConnection = null
 	}
-	
+
 	def static getConfiguration(IPreferenceStore preferences, String name, String defaultValue) {
 		val conf = preferences.getString(name)
 		if(conf.empty) {
@@ -143,45 +159,78 @@ class Activator extends AbstractUIPlugin implements BundleActivator {
 		}
 	}
 
+	def getFirstRunTime() {
+		val cal = Calendar.getInstance()
+		cal.set(Calendar.MILLISECOND, 0)
+		cal.set(Calendar.SECOND, cal.get(Calendar.SECOND) + 1)
+		return cal.time
+	}
+
+	def getPeriod() {
+		return Duration.ofSeconds(1).toMillis()
+	}
+
 	def static BundleContext getContext() {
 		return context
 	}
 
-	def static getTrades() {
-		return trades.subscribeOn(Schedulers.computation)
-	}
-
-	def static getOrderbook() {
-		return orderbook.subscribeOn(Schedulers.computation)
-	}
-	
-	def static getOrderbookPrimer() {
-		return orderbookPrimer
+	def static getData() {
+		return data
 	}
 
 	def static getDefault() {
 		return instance
 	}
-	
+
 	def static getOrderbooksFromApi(String host) {
 		val url = new URL("http", host, "/orderbook")
 		val gson = new GsonBuilder().setDateFormat("yyyy-MM-dd'T'HH:mm:ssX").create()
 		val array = gson.fromJson(IOUtils.toString(url, Charset.defaultCharset), JsonArray)
-		array.map[
+		array.map [
 			val orderbook = asJsonObject
 			val date = gson.fromJson(orderbook.get("timestamp"), Date)
-			val asks = orderbook.getAsJsonArray("asks").map[
+			val asks = orderbook.getAsJsonArray("asks").map [
 				val price = asJsonObject.getAsJsonPrimitive("price").asDouble
 				val amount = asJsonObject.getAsJsonPrimitive("amount").asDouble
 				return new LimitOrder(price, amount) as ILimitOrder
 			].sortBy[price.doubleValue].toList()
-			val bids = orderbook.getAsJsonArray("bids").map[
+			val bids = orderbook.getAsJsonArray("bids").map [
 				val price = asJsonObject.getAsJsonPrimitive("price").asDouble
 				val amount = asJsonObject.getAsJsonPrimitive("amount").asDouble
 				return new LimitOrder(price, amount) as ILimitOrder
 			].sortBy[price.doubleValue].reverse().toList()
 			return new Orderbook(date, asks, bids) as IOrderbook
 		].sortBy[timestamp]
+	}
+
+	def static getOrderbookData() {
+		val linecounter = new AtomicLong(-1)
+		Files.readAllLines(Paths.get("/home/sirolf2009/git/serenity/orderbook.csv")).map[split(",")].map [
+			try {
+				linecounter.incrementAndGet()
+				val orders = (1 ..< size()).map [ i |
+					try {
+						val data = get(i).split(":")
+						val price = Double.parseDouble(data.get(1))
+						val amount = Double.parseDouble(data.get(2))
+						data.get(0) -> new LimitOrder(price, amount) as ILimitOrder
+					} catch(Exception e) {
+						throw new RuntimeException("Failed to parse column " + i + ": " + get(i), e)
+					}
+				].groupBy[key]
+				new Orderbook(new Date(Long.parseLong(get(0))), orders.get("ask").map [
+					value
+				].sortBy[price.doubleValue()].toList(), orders.get("bid").map [
+					value
+				].sortBy[price.doubleValue()].toList()) as IOrderbook
+			} catch(Exception e) {
+				throw new RuntimeException("Failed to parse line " + linecounter.get() + " " + it.toList(), e)
+			}
+		]
+	}
+
+	def static getSerenityData(Consumer<ITick> tickConsumer) {
+		Collector.getData("serenity", new Date(System.currentTimeMillis() - Duration.ofMinutes(15).toMillis()), new Date(), tickConsumer)
 	}
 
 }

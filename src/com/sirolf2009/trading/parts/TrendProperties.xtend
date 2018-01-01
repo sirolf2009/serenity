@@ -8,15 +8,16 @@ import com.sirolf2009.commonwealth.timeseries.Timeseries
 import com.sirolf2009.commonwealth.timeseries.trends.IPeakTroughFinder
 import com.sirolf2009.commonwealth.timeseries.trends.PeakTroughFinderPercentage
 import com.sirolf2009.commonwealth.trading.orderbook.IOrderbook
-import com.sirolf2009.trading.IExchangePart
 import javax.annotation.PostConstruct
 import org.apache.commons.collections4.queue.CircularFifoQueue
 import org.eclipse.swt.widgets.Composite
 import org.eclipse.xtend.lib.annotations.Data
 import org.swtchart.Chart
 import org.swtchart.internal.series.BarSeries
+import com.sirolf2009.trading.Activator
+import com.google.common.eventbus.Subscribe
 
-class TrendProperties extends ChartPart implements IExchangePart {
+class TrendProperties extends ChartPart {
 
 	var Chart chart
 	var BarSeries averageBidSum
@@ -28,6 +29,7 @@ class TrendProperties extends ChartPart implements IExchangePart {
 
 	@PostConstruct
 	override createPartControl(Composite parent) {
+		Activator.data.register(this)
 		chart = parent.createChart() => [
 			yAxis.title.text = "Value"
 			xAxis.enableCategory(true)
@@ -40,18 +42,13 @@ class TrendProperties extends ChartPart implements IExchangePart {
 				barColor = red
 			]
 		]
-
-		orderbook.subscribe [
-			if(chart.disposed) {
-				return
-			}
-			if(it !== null) {
-				receiveOrderbook(it)
-			}
-		]
 	}
 
+	@Subscribe
 	def receiveOrderbook(IOrderbook orderbook) {
+		if(chart.disposed) {
+			return
+		}
 		buffer.add(orderbook)
 		val mids = new Timeseries((0 ..< buffer.size()).map[new Point(it, buffer.get(it).mid) as IPoint].toList())
 		val extremes = peakTroughFinder.apply(mids)
@@ -77,7 +74,7 @@ class TrendProperties extends ChartPart implements IExchangePart {
 			]
 		}
 	}
-	
+
 	override setFocus() {
 		chart.setFocus()
 	}

@@ -1,7 +1,9 @@
 package com.sirolf2009.trading.parts
 
+import com.google.common.eventbus.Subscribe
 import com.sirolf2009.commonwealth.trading.orderbook.ILimitOrder
-import com.sirolf2009.trading.IExchangePart
+import com.sirolf2009.commonwealth.trading.orderbook.IOrderbook
+import com.sirolf2009.trading.Activator
 import java.text.DecimalFormat
 import java.util.ArrayList
 import java.util.List
@@ -18,7 +20,7 @@ import org.eclipse.swt.widgets.TableColumn
 import org.eclipse.swt.widgets.TableItem
 import org.eclipse.xtend.lib.annotations.Data
 
-class Orderbook implements IExchangePart {
+class Orderbook {
 
 	val List<Entry> entries = new ArrayList()
 	var Table table
@@ -31,6 +33,7 @@ class Orderbook implements IExchangePart {
 
 	@PostConstruct
 	def void createPartControl(Composite parent) {
+		Activator.data.register(this)
 		val green = parent.display.getSystemColor(SWT.COLOR_DARK_GREEN)
 		val red = parent.display.getSystemColor(SWT.COLOR_DARK_RED)
 		val brightGreen = new Color(null, 0, green.green + 40, 0)
@@ -55,7 +58,7 @@ class Orderbook implements IExchangePart {
 						entries.get(index).ask.map[price.toString()].orElse("")
 					]
 				} catch(Exception e) {
-					throw new RuntimeException("Failed to set text for "+entries.get(index), e)
+					throw new RuntimeException("Failed to set text for " + entries.get(index), e)
 				}
 				item.setBackground(0, green)
 				item.setBackground(1, green)
@@ -150,30 +153,31 @@ class Orderbook implements IExchangePart {
 				gc.background = background
 			]
 		]
+	}
 
-		orderbook.subscribe [
+	@Subscribe
+	def void onOrderbook(IOrderbook it) {
+		if(table.isDisposed) {
+			return
+		}
+		val orders = (0 ..< Math.max(bids.size(), asks.size())).map [ index |
+			val bid = if(index < bids.size()) Optional.of(bids.get(index)) else Optional.empty()
+			val ask = if(index < asks.size()) Optional.of(asks.get(index)) else Optional.empty()
+			return bid -> ask
+		].toList()
+		val newEntries = orders.map [
+			val cumulativeBid = (0 .. orders.indexOf(it)).map[orders.get(it).key.map[amount.doubleValue()].orElse(0d)].reduce[a, b|a + b]
+			val cumulativeAsk = (0 .. orders.indexOf(it)).map[orders.get(it).value.map[amount.doubleValue()].orElse(0d)].reduce[a, b|a + b]
+			return new Entry(key, cumulativeBid, value, cumulativeAsk)
+		]
+		table.display.syncExec [
 			if(table.isDisposed) {
 				return
 			}
-			val orders = (0 ..< Math.max(bids.size(), asks.size())).map [ index |
-				val bid = if(index < bids.size()) Optional.of(bids.get(index)) else Optional.empty()
-				val ask = if(index < asks.size()) Optional.of(asks.get(index)) else Optional.empty()
-				return bid -> ask
-			].toList()
-			val newEntries = orders.map [
-				val cumulativeBid = (0 .. orders.indexOf(it)).map[orders.get(it).key.map[amount.doubleValue()].orElse(0d)].reduce[a, b|a + b]
-				val cumulativeAsk = (0 .. orders.indexOf(it)).map[orders.get(it).value.map[amount.doubleValue()].orElse(0d)].reduce[a, b|a + b]
-				return new Entry(key, cumulativeBid, value, cumulativeAsk)
-			]
-			parent.display.syncExec [
-				if(table.isDisposed) {
-					return
-				}
-				entries.clear()
-				entries.addAll(newEntries)
-				table.clearAll()
-				table.itemCount = newEntries.size()
-			]
+			entries.clear()
+			entries.addAll(newEntries)
+			table.clearAll()
+			table.itemCount = newEntries.size()
 		]
 	}
 

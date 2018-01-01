@@ -3,8 +3,10 @@ package com.sirolf2009.trading.parts
 import com.sirolf2009.commonwealth.indicator.line.ILineIndicator
 import com.sirolf2009.trading.SerenityChart
 import com.sirolf2009.trading.SerenityChart.Indicator
+import java.util.Date
 import java.util.HashMap
 import java.util.UUID
+import org.apache.commons.collections4.queue.CircularFifoQueue
 import org.eclipse.swt.dnd.DND
 import org.eclipse.swt.dnd.DragSource
 import org.eclipse.swt.dnd.DragSourceEvent
@@ -17,8 +19,6 @@ import org.eclipse.swt.graphics.Color
 import org.eclipse.swt.widgets.Composite
 import org.eclipse.ui.part.ViewPart
 import org.eclipse.xtend.lib.annotations.FinalFieldsConstructor
-import org.apache.commons.collections4.queue.CircularFifoQueue
-import java.util.Date
 
 @FinalFieldsConstructor class IndicatorChart extends ViewPart {
 
@@ -31,6 +31,7 @@ import java.util.Date
 
 	override createPartControl(Composite parent) {
 		chart = new SerenityChart(parent)
+		
 		val indicator = chart.addIndicator(formula, color, name)
 
 		new DragSource(chart, DND.DROP_MOVE.bitwiseOr(DND.DROP_COPY)) => [
@@ -77,9 +78,7 @@ import java.util.Date
 						val indicator = aether.get(key)
 						println("Adding "+indicator.line.id)
 						val xData = new CircularFifoQueue<Date>(indicator.XData.maxSize)
-						xData.addAll(indicator.XData)
 						val yData = new CircularFifoQueue<Double>(indicator.YData.maxSize)
-						yData.addAll(indicator.YData)
 						chart.addIndicator(indicator.formula, indicator.line.lineColor, indicator.line.id, xData, yData)
 					}
 				}

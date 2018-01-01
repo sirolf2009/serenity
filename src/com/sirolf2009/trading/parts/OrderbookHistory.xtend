@@ -1,8 +1,9 @@
 package com.sirolf2009.trading.parts
 
+import com.sirolf2009.commonwealth.timeseries.IPoint
+import com.sirolf2009.commonwealth.timeseries.Point
 import com.sirolf2009.commonwealth.trading.orderbook.IOrderbook
 import com.sirolf2009.trading.Activator
-import com.sirolf2009.trading.IExchangePart
 import java.time.Duration
 import java.util.Date
 import java.util.HashMap
@@ -22,12 +23,12 @@ import org.swtchart.ISeries.SeriesType
 import org.swtchart.LineStyle
 import org.swtchart.Range
 import org.swtchart.internal.series.LineSeries
-import com.sirolf2009.commonwealth.timeseries.trends.PeakTroughFinderPercentage
-import com.sirolf2009.commonwealth.timeseries.IPoint
-import com.sirolf2009.commonwealth.timeseries.Point
+import com.sirolf2009.commonwealth.timeseries.trends.TrendFinderAngleStdDev
 import com.sirolf2009.commonwealth.timeseries.Timeseries
+import com.google.common.eventbus.Subscribe
+import com.sirolf2009.commonwealth.ITick
 
-class OrderbookHistory extends ChartPart implements IExchangePart {
+class OrderbookHistory extends ChartPart {
 
 	var OrderbookHistoryComponent chart
 
@@ -41,7 +42,7 @@ class OrderbookHistory extends ChartPart implements IExchangePart {
 		chart.setFocus()
 	}
 
-	static class OrderbookHistoryComponent extends Chart implements IExchangePart {
+	static class OrderbookHistoryComponent extends Chart {
 
 		val bufferSize = 50000
 		val bidBuffer = new CircularFifoQueue<Double>(bufferSize)
@@ -49,9 +50,9 @@ class OrderbookHistory extends ChartPart implements IExchangePart {
 		val askBuffer = new CircularFifoQueue<Double>(bufferSize)
 		val midBuffer = new CircularFifoQueue<IPoint>(bufferSize)
 		val volumeBuffer = new CircularFifoQueue<Pair<Date, List<Pair<Double, Double>>>>(bufferSize)
-		val peakTroughFinder = new PeakTroughFinderPercentage(0.02)
 		val updateInterval = Duration.ofSeconds(0).toMillis()
 		var Date lastUpdate = null
+		val trendFinder = new TrendFinderAngleStdDev(15)
 
 		val savedColors = new HashMap<Long, Color>()
 		val colors = #[
@@ -67,7 +68,7 @@ class OrderbookHistory extends ChartPart implements IExchangePart {
 		var LineSeries bid
 		var LineSeries ask
 		var LineSeries volume
-		var LineSeries peaksTrough
+		var LineSeries trends
 
 		var zoomY = 49
 
@@ -88,46 +89,47 @@ class OrderbookHistory extends ChartPart implements IExchangePart {
 				zoom(count / 3)
 			]
 
+			bid = createLineSeries("Bid")
+			bid.symbolType = PlotSymbolType.NONE
+			bid.lineWidth = 3
+			bid.lineColor = green
+			bid.enableStep(true)
+			ask = createLineSeries("Ask")
+			ask.lineWidth = 3
+			ask.lineColor = red
+			ask.enableStep(true)
 			volume = createLineSeries("Volume")
 			volume.visibleInLegend = false
 			volume.lineStyle = LineStyle.NONE
 			volume.symbolType = PlotSymbolType.SQUARE
 			volume.symbolSize = 1
-			peaksTrough = createLineSeries("PeakTrough")
-			peaksTrough.visibleInLegend = false
-			peaksTrough.lineStyle = LineStyle.NONE
-			peaksTrough.symbolType = PlotSymbolType.TRIANGLE
-			peaksTrough.symbolSize = 4
-			peaksTrough.symbolColor = blue
-			bid = createLineSeries("Bid")
-			bid.symbolType = PlotSymbolType.NONE
-			bid.lineWidth = 2
-			bid.lineColor = green
-			bid.enableStep(true)
-			ask = createLineSeries("Ask")
-			ask.lineWidth = 2
-			ask.lineColor = red
-			ask.enableStep(true)
-			
-			Activator.orderbookPrimer.forEach[addOrderbookToBuffer]
+			trends = createLineSeries("Trend")
+			trends.visibleInLegend = false
+			trends.lineStyle = LineStyle.DOT
+			trends.symbolType = PlotSymbolType.DIAMOND
+			trends.symbolSize = 4
+			bid.lineWidth = 3
+			trends.symbolColor = new Color(parent.display, 0, 255, 255)
+			trends.lineColor = new Color(parent.display, 0, 255, 255)
 
-			orderbook.subscribe [
-				if(disposed) {
-					return
-				}
-				if(it !== null) {
-					receiveOrderbook(it)
-				}
-			]
+			Activator.data.register(this)
 		}
-
+		
+		@Subscribe
+		def receiveTick(ITick tick) {
+			new Thread [
+				tick.orderbook?.receiveOrderbook
+			].start()
+		}
+		
 		def receiveOrderbook(IOrderbook it) {
+			println("orderbook	" + timestamp + "	" + asks.get(0).price)
 			if(it !== null) {
 				addOrderbookToBuffer()
 				val volumesX = volumeBuffer.parallelStream.flatMap [ tick |
-						IntStream.range(0, tick.value.size()).parallel().mapToObj[
-							tick.key
-						]
+					IntStream.range(0, tick.value.size()).parallel().mapToObj [
+						tick.key
+					]
 				].collect(Collectors.toList())
 				val volumesY = volumeBuffer.parallelStream.flatMap [ tick |
 					tick.value.parallelStream.map[key]
@@ -137,9 +139,9 @@ class OrderbookHistory extends ChartPart implements IExchangePart {
 						getGradient(longValue)
 					]
 				].collect(Collectors.toList())
-				val reversals = peakTroughFinder.apply(new Timeseries(midBuffer.toList())).map[point]
-				val reversalsX = reversals.map[new Date(x.longValue)]
-				val reversalsY = reversals.map[y.doubleValue]
+				val trendsPoints = trendFinder.apply(new Timeseries(midBuffer.toList())).map[it.from].toList() + #[midBuffer.last]
+				val trendsX = trendsPoints.map[date].toList()
+				val trendsY = trendsPoints.map[y.doubleValue].toList()
 				if(disposed) {
 					return
 				}
@@ -154,23 +156,23 @@ class OrderbookHistory extends ChartPart implements IExchangePart {
 					volume.XDateSeries = volumesX
 					volume.YSeries = volumesY
 					volume.symbolColors = volumesColor
-					peaksTrough.XDateSeries = reversalsX
-					peaksTrough.YSeries = reversalsY
+					trends.XDateSeries = trendsX
+					trends.YSeries = trendsY
 					adjustRange()
 				]
 			} else {
 				System.err.println("Orderbook is null")
 			}
 		}
-		
+
 		def addOrderbookToBuffer(IOrderbook it) {
-			if(it !== null && (lastUpdate === null || timestamp.time-lastUpdate.time >= updateInterval)) {
+			if(it !== null && (lastUpdate === null || timestamp.time - lastUpdate.time >= updateInterval)) {
 				bidBuffer.add(bids.get(0).price.doubleValue())
 				askBuffer.add(asks.get(0).price.doubleValue())
 				bidAskDateBuffer.add(timestamp)
 
 				volumeBuffer.add(Pair.of(timestamp, (bids.map[price.doubleValue() -> amount.doubleValue()] + asks.map[price.doubleValue() -> amount.doubleValue()]).toList()))
-				midBuffer.add(new Point(timestamp.time, (bidBuffer.last+askBuffer.last)/2))
+				midBuffer.add(new Point(timestamp.time, (bidBuffer.last + askBuffer.last) / 2))
 			}
 		}
 
