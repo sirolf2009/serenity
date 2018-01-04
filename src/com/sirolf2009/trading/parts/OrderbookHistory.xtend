@@ -62,7 +62,7 @@ class OrderbookHistory extends ChartPart {
 			new Color(null, 255, 255, 0),
 			new Color(null, 255, 0, 0)
 		]
-		val largeVolume = 50
+		val largeVolume = getLargeVolume()
 		val stepSize = largeVolume / colors.size() - 1
 
 		var LineSeries bid
@@ -103,27 +103,27 @@ class OrderbookHistory extends ChartPart {
 			volume.lineStyle = LineStyle.NONE
 			volume.symbolType = PlotSymbolType.SQUARE
 			volume.symbolSize = 1
-			trends = createLineSeries("Trend")
-			trends.visibleInLegend = false
-			trends.lineStyle = LineStyle.DOT
-			trends.symbolType = PlotSymbolType.DIAMOND
-			trends.symbolSize = 4
-			bid.lineWidth = 3
-			trends.symbolColor = new Color(parent.display, 0, 255, 255)
-			trends.lineColor = new Color(parent.display, 0, 255, 255)
+			if(Activator.^default.preferenceStore.getBoolean("trends")) {
+				trends = createLineSeries("Trend")
+				trends.visibleInLegend = false
+				trends.lineStyle = LineStyle.DOT
+				trends.symbolType = PlotSymbolType.DIAMOND
+				trends.symbolSize = 4
+				trends.symbolColor = new Color(parent.display, 0, 255, 255)
+				trends.lineColor = new Color(parent.display, 0, 255, 255)
+			}
 
 			Activator.data.register(this)
 		}
-		
+
 		@Subscribe
 		def receiveTick(ITick tick) {
 			new Thread [
 				tick.orderbook?.receiveOrderbook
 			].start()
 		}
-		
+
 		def receiveOrderbook(IOrderbook it) {
-			println("orderbook	" + timestamp + "	" + asks.get(0).price)
 			if(it !== null) {
 				addOrderbookToBuffer()
 				val volumesX = volumeBuffer.parallelStream.flatMap [ tick |
@@ -139,9 +139,6 @@ class OrderbookHistory extends ChartPart {
 						getGradient(longValue)
 					]
 				].collect(Collectors.toList())
-				val trendsPoints = trendFinder.apply(new Timeseries(midBuffer.toList())).map[it.from].toList() + #[midBuffer.last]
-				val trendsX = trendsPoints.map[date].toList()
-				val trendsY = trendsPoints.map[y.doubleValue].toList()
 				if(disposed) {
 					return
 				}
@@ -156,10 +153,21 @@ class OrderbookHistory extends ChartPart {
 					volume.XDateSeries = volumesX
 					volume.YSeries = volumesY
 					volume.symbolColors = volumesColor
-					trends.XDateSeries = trendsX
-					trends.YSeries = trendsY
 					adjustRange()
 				]
+				if(Activator.^default.preferenceStore.getBoolean("trends")) {
+					val trendsPoints = trendFinder.apply(new Timeseries(midBuffer.toList())).map[it.from].toList() + #[midBuffer.last]
+					val trendsX = trendsPoints.map[date].toList()
+					val trendsY = trendsPoints.map[y.doubleValue].toList()
+					display.syncExec [
+						if(disposed) {
+							return
+						}
+						trends.XDateSeries = trendsX
+						trends.YSeries = trendsY
+
+					]
+				}
 			} else {
 				System.err.println("Orderbook is null")
 			}
@@ -223,6 +231,14 @@ class OrderbookHistory extends ChartPart {
 
 		def yAxis(Chart chart) {
 			return chart.axisSet.YAxes.get(0)
+		}
+
+		def static getLargeVolume() {
+			val setting = Activator.^default.preferenceStore.getInt("largeVolume")
+			if(setting == 0) {
+				return 50
+			}
+			return setting
 		}
 
 	}

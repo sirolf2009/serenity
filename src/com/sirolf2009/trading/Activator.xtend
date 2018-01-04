@@ -1,5 +1,6 @@
 package com.sirolf2009.trading
 
+import com.google.common.eventbus.EventBus
 import com.google.common.eventbus.Subscribe
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonArray
@@ -40,7 +41,6 @@ import org.eclipse.jface.preference.IPreferenceStore
 import org.eclipse.ui.plugin.AbstractUIPlugin
 import org.osgi.framework.BundleActivator
 import org.osgi.framework.BundleContext
-import com.google.common.eventbus.EventBus
 
 class Activator extends AbstractUIPlugin implements BundleActivator {
 
@@ -51,11 +51,11 @@ class Activator extends AbstractUIPlugin implements BundleActivator {
 	private static var Activator instance
 	private static var BundleContext context
 	private static var BitfinexWebsocketClient exchange
-	private static var List<IOrderbook> orderbookPrimer
 
 	override start(BundleContext bundleContext) throws Exception {
 		instance = this
 		Activator.context = bundleContext
+		SerenityPreferences.setDefaults(preferenceStore)
 
 		val timer = new Timer()
 		timer.scheduleAtFixedRate(new TimerTask() {
@@ -73,13 +73,6 @@ class Activator extends AbstractUIPlugin implements BundleActivator {
 			}
 		}, getFirstRunTime(), getPeriod())
 
-		try {
-			orderbookPrimer = getOrderbooksFromApi("serenity").toList()
-//			orderbookPrimer = getOrderbookData()
-		} catch(Exception e) {
-			log.log(new Status(IStatus.WARNING, "serenity", "Could not prime the orderbook", e))
-			orderbookPrimer = new ArrayList()
-		}
 		if(preferenceStore.getBoolean("authenticate")) {
 			if(!preferenceStore.getString("username").empty) {
 //				val userName = preferenceStore.getString("username")
