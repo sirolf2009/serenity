@@ -65,6 +65,15 @@
             name="Buy Volume"
             restorable="true">
       </view>
+      <view
+            allowMultiple="true"
+            category="Trading"
+            class="com.sirolf2009.trading.parts.GannSquare"
+            icon="icons/Sample.png"
+            id="com.sirolf2009.trading.parts.GannSquare"
+            name="Gann Square"
+            restorable="true">
+      </view>
    </extension>
 
 </plugin>
