@@ -1,7 +1,6 @@
 package com.sirolf2009.trading.parts
 
 import com.sirolf2009.commonwealth.trading.ITrade
-import com.sirolf2009.trading.IExchangePart
 import java.text.SimpleDateFormat
 import javax.annotation.PostConstruct
 import org.apache.commons.collections4.queue.CircularFifoQueue
@@ -13,8 +12,10 @@ import org.eclipse.swt.widgets.Composite
 import org.eclipse.swt.widgets.Table
 import org.eclipse.swt.widgets.TableColumn
 import org.eclipse.swt.widgets.TableItem
+import com.google.common.eventbus.Subscribe
+import com.sirolf2009.trading.Activator
 
-class Trades implements IExchangePart {
+class Trades {
 
 	val buffer = new CircularFifoQueue<ITrade>(512)
 	var Table table
@@ -24,6 +25,7 @@ class Trades implements IExchangePart {
 
 	@PostConstruct
 	def void createPartControl(Composite parent) {
+		Activator.data.register(this)
 		val green = parent.display.getSystemColor(SWT.COLOR_DARK_GREEN)
 		val red = parent.display.getSystemColor(SWT.COLOR_DARK_RED)
 		val brightGreen = new Color(null, 0, green.green + 40, 0)
@@ -95,7 +97,7 @@ class Trades implements IExchangePart {
 						gc.fillRectangle(x, y, size, height - 1)
 					} else {
 						gc.background = brightRed
-						gc.fillRectangle(x, y, size*-1, height - 1)
+						gc.fillRectangle(x, y, size * -1, height - 1)
 					}
 					gc.background = background
 					gc.drawText(item.getText(0), x + 4, y + 2, true)
@@ -103,19 +105,21 @@ class Trades implements IExchangePart {
 				gc.background = background
 			]
 		]
-		trades.subscribe [
+	}
+
+	@Subscribe
+	def void onTrade(ITrade trade) {
+		if(table.disposed) {
+			return
+		}
+		buffer.add(trade)
+		table.display.syncExec [
 			if(table.disposed) {
 				return
 			}
-			buffer.add(it)
-			parent.display.syncExec [
-				if(table.disposed) {
-					return
-				}
-				table.clearAll()
-				table.itemCount = buffer.size()
-			]
+			table.clearAll()
+			table.itemCount = buffer.size()
 		]
 	}
-	
+
 }

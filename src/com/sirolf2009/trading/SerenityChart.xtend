@@ -10,8 +10,6 @@ import java.util.ArrayList
 import java.util.Calendar
 import java.util.Collections
 import java.util.Date
-import java.util.Timer
-import java.util.TimerTask
 import java.util.concurrent.atomic.AtomicReference
 import java.util.stream.Collectors
 import org.apache.commons.collections4.queue.CircularFifoQueue
@@ -26,8 +24,9 @@ import org.swtchart.ILineSeries.PlotSymbolType
 import org.swtchart.ISeries.SeriesType
 import org.swtchart.internal.series.BarSeries
 import org.swtchart.internal.series.LineSeries
+import com.google.common.eventbus.Subscribe
 
-class SerenityChart extends Chart implements IExchangePart {
+class SerenityChart extends Chart {
 
 	public static val red = new Color(Display.^default, 255, 0, 0)
 	public static val green = new Color(Display.^default, 0, 255, 0)
@@ -37,6 +36,7 @@ class SerenityChart extends Chart implements IExchangePart {
 
 	val orderbook = new AtomicReference<IOrderbook>
 	val trades = Collections.synchronizedList(new ArrayList<ITrade>())
+	val ticks = new ArrayList<ITick>()
 	val indicators = new ArrayList<Indicator>()
 
 	new(Composite parent) {
@@ -50,21 +50,8 @@ class SerenityChart extends Chart implements IExchangePart {
 		yAxis.tick.foreground = white
 		yAxis.title.foreground = white
 		yAxis.title.text = ""
-		getOrderbook.subscribe [
-			orderbook.set(it)
-		]
-		getTrades.subscribe [
-			trades += it
-		]
-		val timer = new Timer()
-		timer.scheduleAtFixedRate(new TimerTask() {
-			override run() {
-				if(disposed) {
-					return
-				}
-				tick(new Date(scheduledExecutionTime))
-			}
-		}, getFirstRunTime(), getPeriod())
+		legend.visible = false
+		Activator.data.register(this)
 	}
 
 	def addIndicator(ILineIndicator formula, Color color, String name) {
@@ -72,11 +59,15 @@ class SerenityChart extends Chart implements IExchangePart {
 	}
 
 	def addIndicator(ILineIndicator formula, Color color, String name, CircularFifoQueue<Date> xDates, CircularFifoQueue<Double> yValues) {
-		return addIndicator(new Indicator(formula, createLineSeries(color, name), xDates, yValues))
+		return addIndicator(new Indicator(formula.copy, createLineSeries(color, name), xDates, yValues))
 	}
 
 	def addIndicator(Indicator indicator) {
 		indicators.add(indicator)
+		ticks.forEach [
+			tick(it, indicator)
+		]
+		adjustAxis()
 		return indicator
 	}
 
@@ -94,31 +85,45 @@ class SerenityChart extends Chart implements IExchangePart {
 		tick(new Tick(timestamp, orderbook.get(), currentTrades))
 	}
 
+	@Subscribe
 	def tick(ITick tick) {
+		ticks += tick
 		indicators.forEach [
 			try {
-				val point = formula.apply(tick)
-				xData.add(point.date)
-				yData.add(point.y.doubleValue())
-				line.XDateSeries = xData
-				line.YSeries = yData
+				tick(tick, it)
 			} catch(Exception e) {
+				println(tick)
 				e.printStackTrace()
 			}
 		]
+		adjustAxis()
+	}
+
+	def tick(ITick tick, Indicator indicator) {
+		val point = indicator.formula.apply(tick)
+		indicator.xData.add(point.date)
+		indicator.yData.add(point.y.doubleValue())
+		indicator.line.XDateSeries = indicator.xData
+		indicator.line.YSeries = indicator.yData
+	}
+
+	def adjustAxis() {
 		display.syncExec [
+			if(disposed) {
+				return
+			}
 			axisSet.adjustRange()
 			redraw()
 		]
 	}
-	
+
 	def createLineSeries(Chart chart, Color color, String name) {
 		return chart.seriesSet.createSeries(SeriesType.LINE, name) as LineSeries => [
 			symbolType = PlotSymbolType.NONE
 			lineColor = color
 		]
 	}
-	
+
 	def createBarSeries(Chart chart, String name) {
 		return chart.seriesSet.createSeries(SeriesType.BAR, name) as BarSeries
 	}
@@ -133,13 +138,13 @@ class SerenityChart extends Chart implements IExchangePart {
 	def getPeriod() {
 		return Duration.ofSeconds(1).toMillis()
 	}
-	
+
 	@Data static class Indicator {
 		val ILineIndicator formula
 		val ILineSeries line
 		val CircularFifoQueue<Date> xData
 		val CircularFifoQueue<Double> yData
-		
+
 	}
 
 }
